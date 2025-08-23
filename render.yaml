@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: sunray-livechat-new
+    env: node
+    plan: free
+    region: frankfurt
+    buildCommand: "npm ci"
+    startCommand: "npm start"
+    autoDeploy: true
