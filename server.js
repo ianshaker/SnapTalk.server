@@ -5,17 +5,29 @@ import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * ENV (добавишь на Render):
- * - TELEGRAM_BOT_TOKEN
- * - TELEGRAM_SUPERGROUP_ID   (id супергруппы с включённым Forum)
- * - TELEGRAM_WEBHOOK_SECRET  (любой случайный текст, чтобы урл вебхука был скрытым)
- * - SUPABASE_URL (опц.)
- * - SUPABASE_SERVICE_ROLE (опц.)
+ * ENV (ставим на Render → Settings → Environment):
+ * - TELEGRAM_BOT_TOKEN        // токен бота из BotFather
+ * - TELEGRAM_SUPERGROUP_ID    // ИД супергруппы с включённым Forum, ВНИМАНИЕ: с минусом! пример: -1002996396033
+ * - TELEGRAM_WEBHOOK_SECRET   // произвольная строка для секьюрного пути вебхука
+ * - SUPABASE_URL              // (опц.) URL проекта Supabase
+ * - SUPABASE_SERVICE_ROLE     // (опц.) сервисный ключ Supabase (только на сервер!)
  */
 
 const app = express();
-app.use(cors());
-app.use(bodyParser.json());
+
+// Разрешаем запросы только с твоего сайта и поддоменов *.lovable.app
+const allowed = ['https://savov.lovable.app'];
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // health, Postman
+    if (allowed.includes(origin) || /\.lovable\.app$/i.test(origin)) return cb(null, true);
+    return cb(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+}));
+app.options('*', cors());
+
+app.use(bodyParser.json({ limit: '1mb' }));
 
 const PORT = process.env.PORT || 3000;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -25,11 +37,12 @@ const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || 'dev-secret';
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE;
 
+// Клиент Supabase (если заданы переменные)
 const sb = (SUPABASE_URL && SUPABASE_SERVICE_ROLE)
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
   : null;
 
-// Простейший кэш на случай отсутствия БД (пропадёт после рестарта)
+// Простейший in-memory кэш (на случай, если Supabase не подключён)
 const memoryMap = new Map(); // clientId -> topicId
 
 async function dbGetTopic(clientId) {
@@ -51,32 +64,34 @@ async function dbSaveTopic(clientId, topicId) {
   if (error) console.error('dbSaveTopic error', error);
 }
 
-// Создать топик в супергруппе (forum)
+// Создать топик (forum topic) в супергруппе и запомнить маппинг
 async function ensureTopic(clientId) {
-  // ищем в БД/кэше
   let topicId = await dbGetTopic(clientId);
   if (topicId) return topicId;
 
-  // создаём новый топик
+  if (!BOT_TOKEN || !SUPERGROUP_ID) {
+    throw new Error('Telegram env vars not set (BOT_TOKEN or SUPERGROUP_ID)');
+  }
+
   const title = `Client #${clientId}`;
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/createForumTopic`;
   const { data } = await axios.post(url, {
     chat_id: SUPERGROUP_ID,
     name: title
   });
-  if (!data.ok) throw new Error('createForumTopic failed: ' + JSON.stringify(data));
+  if (!data?.ok) throw new Error('createForumTopic failed: ' + JSON.stringify(data));
   topicId = data.result.message_thread_id;
+
   await dbSaveTopic(clientId, topicId);
   return topicId;
 }
 
 // Отправить сообщение в нужный топик
 async function sendToTopic({ clientId, text, prefix = '' }) {
-  if (!BOT_TOKEN || !SUPERGROUP_ID) throw new Error('Telegram env vars not set');
   const topicId = await ensureTopic(clientId);
 
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-  const msg = `${prefix}${text}`;
+  const msg = `${prefix}${text}`.slice(0, 4096); // ограничение Telegram
   const payload = {
     chat_id: SUPERGROUP_ID,
     message_thread_id: topicId,
@@ -85,7 +100,7 @@ async function sendToTopic({ clientId, text, prefix = '' }) {
     disable_web_page_preview: true
   };
   const { data } = await axios.post(url, payload);
-  if (!data.ok) throw new Error('sendMessage failed: ' + JSON.stringify(data));
+  if (!data?.ok) throw new Error('sendMessage failed: ' + JSON.stringify(data));
   return data.result;
 }
 
@@ -94,16 +109,25 @@ app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
 /**
  * Вход от сайта (посетитель пишет в модалке)
- * body: { clientId: string, text: string, meta?: any }
+ * body: { clientId: string, text: string, meta?: { utm?, ref? } }
  */
 app.post('/api/chat/send', async (req, res) => {
   try {
     const { clientId, text, meta } = req.body || {};
-    if (!clientId || !text) return res.status(400).json({ ok: false, error: 'clientId and text required' });
+    if (!clientId || !text) {
+      return res.status(400).json({ ok: false, error: 'clientId and text required' });
+    }
 
-    const prefix = meta?.utm
-      ? `#${clientId} • ${meta.utm.source || ''}/${meta.utm.campaign || ''}/${meta.utm.term || ''}\n\n`
-      : `#${clientId}\n\n`;
+    const utm = meta?.utm || {};
+    const ref = meta?.ref || '';
+    const prefixParts = [
+      `#${clientId}`,
+      utm.source ? `${utm.source}` : null,
+      utm.campaign ? `${utm.campaign}` : null,
+      utm.term ? `${utm.term}` : null,
+      ref ? `ref:${ref}` : null,
+    ].filter(Boolean);
+    const prefix = prefixParts.length ? `${prefixParts.join(' / ')}\n\n` : `#${clientId}\n\n`;
 
     await sendToTopic({ clientId, text, prefix });
     return res.json({ ok: true });
@@ -115,24 +139,23 @@ app.post('/api/chat/send', async (req, res) => {
 
 /**
  * Вебхук Телеграма (ответ менеджера → на сайт)
- * URL на Render будет: https://<service>.onrender.com/telegram/webhook/<WEBHOOK_SECRET>
- * Подписываем бот на этот вебхук после деплоя.
+ * Путь: https://<render-app>.onrender.com/telegram/webhook/<WEBHOOK_SECRET>
  */
 app.post(`/telegram/webhook/${WEBHOOK_SECRET}`, async (req, res) => {
   try {
     const update = req.body;
 
-    // интересуют только сообщения в топиках супергруппы
     const msg = update?.message;
     const text = msg?.text;
     const topicId = msg?.message_thread_id;
     const chatId = msg?.chat?.id;
 
-    if (chatId !== SUPERGROUP_ID || !topicId || !text) {
+    // Интересуют только сообщения в топиках нашей супергруппы
+    if (!text || !topicId || chatId !== SUPERGROUP_ID) {
       return res.sendStatus(200);
     }
 
-    // Находим clientId по topicId
+    // Ищем clientId по topicId
     let clientId = null;
     if (sb) {
       const { data, error } = await sb
@@ -142,7 +165,6 @@ app.post(`/telegram/webhook/${WEBHOOK_SECRET}`, async (req, res) => {
         .maybeSingle();
       if (!error) clientId = data?.client_id || null;
     } else {
-      // поиск в памяти
       for (const [cid, tid] of memoryMap.entries()) {
         if (tid === topicId) { clientId = cid; break; }
       }
@@ -150,10 +172,8 @@ app.post(`/telegram/webhook/${WEBHOOK_SECRET}`, async (req, res) => {
 
     if (!clientId) return res.sendStatus(200);
 
-    // Здесь у тебя два пути доставки "обратно на сайт":
-    // 1) через Supabase Realtime Broadcast (если используешь фронтенд-подписку на канал client:<id>)
-    // 2) через собственный WebSocket-сервер (если выберешь вариант B)
-    // Ниже пример для Supabase Broadcast:
+    // Дальше два пути доставки в браузер:
+    // 1) Supabase Realtime Broadcast (если фронт подписан на client:<id>)
     if (sb) {
       await sb.channel(`client:${clientId}`).send({
         type: 'broadcast',
@@ -161,6 +181,7 @@ app.post(`/telegram/webhook/${WEBHOOK_SECRET}`, async (req, res) => {
         payload: { from: 'manager', text, ts: Date.now() }
       });
     }
+    // 2) Либо свой WebSocket-хаб — добавим при необходимости.
 
     return res.sendStatus(200);
   } catch (e) {
