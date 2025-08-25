@@ -1,11 +1,11 @@
 import express from 'express';
 import { verifySupabaseToken } from '../middleware/auth.js';
 import { chatVisualConfig } from '../config/chatConfig.js';
+import { ClientsService } from '../config/supabase.js';
 
 const router = express.Router();
 
-// ===== Хранилище клиентов SnapTalk =====
-export const snapTalkClients = new Map(); // В production использовать Supabase или БД
+// ===== API ключи для виджетов =====
 export const apiKeys = new Map([
   // Демонстрационный ключ
   ['demo-snaptalk-2025', {
@@ -23,167 +23,89 @@ export const apiKeys = new Map([
  */
 router.post('/clients/create', verifySupabaseToken, async (req, res) => {
   try {
-    const {
-      // Основная информация
-      clientName,
-      companyName,
-      email,
-      phone,
-      position,
-      
-      // Веб интеграция
-      websiteUrl,
-      apiKey,
-      widgetPosition = 'bottom-right',
-      widgetColor = '#70B347',
-      widgetTitle = 'Поддержка',
-      
-      // Telegram интеграция
-      telegramBotToken,
-      telegramGroupId,
-      telegramBotName,
-      
-      // Настройки сервиса
-      operatorsCount,
-      tariffPlan,
-      timezone = 'Europe/Moscow',
-      language = 'ru',
-      autoResponses = true,
-      workingHoursEnabled = false,
-      offlineMessage,
-      emailNotifications,
-      comments,
-      integrationStatus = 'pending'
-    } = req.body;
+    const clientData = req.body;
 
     // Валидация обязательных полей
-    if (!clientName || !email || !apiKey) {
+    if (!clientData.clientName || !clientData.email || !clientData.apiKey) {
       return res.status(400).json({ 
+        success: false,
         error: 'Required fields: clientName, email, apiKey' 
       });
     }
 
     // Проверяем уникальность API ключа
-    if (snapTalkClients.has(apiKey) || apiKeys.has(apiKey)) {
+    if (apiKeys.has(clientData.apiKey)) {
       return res.status(409).json({ 
+        success: false,
         error: 'API key already exists' 
       });
     }
 
-    // Создаем ID клиента
-    const clientId = `snaptalk_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+    // Создаем клиента в Supabase
+    const newClient = await ClientsService.createClient(req.user, clientData);
     
-    // Создаем кастомную конфигурацию виджета на основе настроек клиента
+    // Создаем кастомную конфигурацию виджета
     const customConfig = {
       ...chatVisualConfig,
-      // Применяем кастомизацию
       position: {
         ...chatVisualConfig.position,
-        bottom: widgetPosition.includes('bottom') ? '1.5rem' : 'auto',
-        top: widgetPosition.includes('top') ? '1.5rem' : 'auto',
-        right: widgetPosition.includes('right') ? '1.5rem' : 'auto',
-        left: widgetPosition.includes('left') ? '1.5rem' : 'auto'
+        bottom: clientData.widgetPosition?.includes('bottom') ? '1.5rem' : 'auto',
+        top: clientData.widgetPosition?.includes('top') ? '1.5rem' : 'auto',
+        right: clientData.widgetPosition?.includes('right') ? '1.5rem' : 'auto',
+        left: clientData.widgetPosition?.includes('left') ? '1.5rem' : 'auto'
       },
       minimizedButton: {
         ...chatVisualConfig.minimizedButton,
-        backgroundColor: widgetColor
+        backgroundColor: clientData.widgetColor || '#70B347'
       },
       texts: {
         ...chatVisualConfig.texts,
-        [language]: {
-          ...chatVisualConfig.texts[language],
-          managerName: widgetTitle || 'Поддержка'
+        [clientData.language || 'ru']: {
+          ...chatVisualConfig.texts[clientData.language || 'ru'],
+          managerName: clientData.widgetTitle || 'Поддержка'
         }
       }
     };
 
-    // Данные клиента для хранения
-    const clientData = {
-      id: clientId,
-      supabaseUserId: req.user.id,
-      
-      // Основная информация
-      clientName,
-      companyName,
-      email,
-      phone,
-      position,
-      
-      // Веб интеграция
-      websiteUrl,
-      apiKey,
-      widgetPosition,
-      widgetColor,
-      widgetTitle,
-      
-      // Telegram интеграция
-      telegramBotToken,
-      telegramGroupId,
-      telegramBotName,
-      
-      // Настройки сервиса
-      operatorsCount,
-      tariffPlan,
-      timezone,
-      language,
-      autoResponses,
-      workingHoursEnabled,
-      offlineMessage,
-      emailNotifications,
-      comments,
-      integrationStatus,
-      
-      // Метаданные
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    // Сохраняем клиента
-    snapTalkClients.set(clientId, clientData);
-    
     // Добавляем API ключ в систему виджетов
     try {
-      const domain = websiteUrl ? new URL(websiteUrl).hostname : '*';
-      apiKeys.set(apiKey, {
-        clientName,
+      const domain = clientData.websiteUrl ? new URL(clientData.websiteUrl).hostname : '*';
+      apiKeys.set(clientData.apiKey, {
+        clientName: clientData.clientName,
         domain,
         config: customConfig,
-        language,
+        language: clientData.language || 'ru',
         created: new Date().toISOString(),
-        snapTalkClientId: clientId
+        snapTalkClientId: newClient.id
       });
     } catch (urlError) {
-      // Если URL некорректный, используем '*'
-      apiKeys.set(apiKey, {
-        clientName,
+      apiKeys.set(clientData.apiKey, {
+        clientName: clientData.clientName,
         domain: '*',
         config: customConfig,
-        language,
+        language: clientData.language || 'ru',
         created: new Date().toISOString(),
-        snapTalkClientId: clientId
+        snapTalkClientId: newClient.id
       });
     }
 
-    console.log(`🎯 SnapTalk client created: ${clientName} (${clientId})`);
+    console.log(`🎯 SnapTalk client created in Supabase: ${newClient.clientName} (${newClient.id})`);
 
-    // Возвращаем данные клиента
+    // Возвращаем данные клиента с embed кодом
     res.json({
       success: true,
       data: {
-        id: clientId,
-        clientName,
-        companyName,
-        email,
-        apiKey,
-        integrationStatus,
-        embedCode: `<script src="${req.protocol}://${req.get('host')}/api/widget.js?key=${apiKey}" async></script>`,
-        createdAt: clientData.createdAt
+        ...newClient,
+        embedCode: `<script src="${req.protocol}://${req.get('host')}/api/widget.js?key=${newClient.apiKey}" async></script>`
       }
     });
 
   } catch (error) {
     console.error('Create client error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Internal server error' 
+    });
   }
 });
 
@@ -193,36 +115,29 @@ router.post('/clients/create', verifySupabaseToken, async (req, res) => {
  */
 router.get('/clients', verifySupabaseToken, async (req, res) => {
   try {
-    const userClients = Array.from(snapTalkClients.values())
-      .filter(client => client.supabaseUserId === req.user.id)
-      .map(client => ({
-        id: client.id,
-        clientName: client.clientName,
-        companyName: client.companyName,
-        email: client.email,
-        phone: client.phone,
-        websiteUrl: client.websiteUrl,
-        apiKey: client.apiKey,
-        integrationStatus: client.integrationStatus,
-        language: client.language,
-        widgetPosition: client.widgetPosition,
-        widgetColor: client.widgetColor,
-        widgetTitle: client.widgetTitle,
-        timezone: client.timezone,
-        createdAt: client.createdAt,
-        updatedAt: client.updatedAt,
-        embedCode: `<script src="${req.protocol}://${req.get('host')}/api/widget.js?key=${client.apiKey}" async></script>`
-      }));
+    // Получаем клиентов из Supabase
+    const userClients = await ClientsService.getClientsByUser(req.user.id);
+
+    // Добавляем embed код к каждому клиенту
+    const clientsWithEmbedCode = userClients.map(client => ({
+      ...client,
+      embedCode: `<script src="${req.protocol}://${req.get('host')}/api/widget.js?key=${client.apiKey}" async></script>`
+    }));
+
+    console.log(`📋 Retrieved ${clientsWithEmbedCode.length} clients for user ${req.user.email}`);
 
     res.json({
       success: true,
-      data: userClients,
-      total: userClients.length
+      data: clientsWithEmbedCode,
+      total: clientsWithEmbedCode.length
     });
 
   } catch (error) {
     console.error('Get clients error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Internal server error' 
+    });
   }
 });
 
@@ -233,16 +148,9 @@ router.get('/clients', verifySupabaseToken, async (req, res) => {
 router.get('/clients/:id', verifySupabaseToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const client = snapTalkClients.get(id);
-
-    if (!client) {
-      return res.status(404).json({ error: 'Client not found' });
-    }
-
-    // Проверяем принадлежность клиента пользователю
-    if (client.supabaseUserId !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    
+    // Получаем клиента из Supabase
+    const client = await ClientsService.getClientById(id, req.user.id);
 
     res.json({
       success: true,
@@ -251,7 +159,18 @@ router.get('/clients/:id', verifySupabaseToken, async (req, res) => {
 
   } catch (error) {
     console.error('Get client error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    
+    if (error.message === 'Client not found') {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Client not found' 
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Internal server error' 
+    });
   }
 });
 
@@ -262,40 +181,23 @@ router.get('/clients/:id', verifySupabaseToken, async (req, res) => {
 router.put('/clients/:id', verifySupabaseToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const client = snapTalkClients.get(id);
+    const updates = req.body;
 
-    if (!client) {
-      return res.status(404).json({ error: 'Client not found' });
-    }
-
-    // Проверяем принадлежность клиента пользователю
-    if (client.supabaseUserId !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    // Обновляем данные
-    const updatedClient = {
-      ...client,
-      ...req.body,
-      id, // Защищаем от изменения ID
-      supabaseUserId: client.supabaseUserId, // Защищаем от изменения владельца
-      updatedAt: new Date().toISOString()
-    };
-
-    snapTalkClients.set(id, updatedClient);
+    // Обновляем клиента в Supabase
+    const updatedClient = await ClientsService.updateClient(id, req.user.id, updates);
 
     // Обновляем API ключ если изменились настройки виджета
-    if (req.body.widgetColor || req.body.widgetPosition || req.body.language) {
-      const apiKeyData = apiKeys.get(client.apiKey);
+    if (updates.widgetColor || updates.widgetPosition || updates.language) {
+      const apiKeyData = apiKeys.get(updatedClient.apiKey);
       if (apiKeyData) {
         const customConfig = {
           ...apiKeyData.config,
           position: {
             ...apiKeyData.config.position,
-            bottom: updatedClient.widgetPosition.includes('bottom') ? '1.5rem' : 'auto',
-            top: updatedClient.widgetPosition.includes('top') ? '1.5rem' : 'auto',
-            right: updatedClient.widgetPosition.includes('right') ? '1.5rem' : 'auto',
-            left: updatedClient.widgetPosition.includes('left') ? '1.5rem' : 'auto'
+            bottom: updatedClient.widgetPosition?.includes('bottom') ? '1.5rem' : 'auto',
+            top: updatedClient.widgetPosition?.includes('top') ? '1.5rem' : 'auto',
+            right: updatedClient.widgetPosition?.includes('right') ? '1.5rem' : 'auto',
+            left: updatedClient.widgetPosition?.includes('left') ? '1.5rem' : 'auto'
           },
           minimizedButton: {
             ...apiKeyData.config.minimizedButton,
@@ -303,7 +205,7 @@ router.put('/clients/:id', verifySupabaseToken, async (req, res) => {
           }
         };
         
-        apiKeys.set(client.apiKey, {
+        apiKeys.set(updatedClient.apiKey, {
           ...apiKeyData,
           config: customConfig,
           language: updatedClient.language
@@ -311,7 +213,7 @@ router.put('/clients/:id', verifySupabaseToken, async (req, res) => {
       }
     }
 
-    console.log(`📝 SnapTalk client updated: ${updatedClient.clientName} (${id})`);
+    console.log(`📝 SnapTalk client updated in Supabase: ${updatedClient.clientName} (${id})`);
 
     res.json({
       success: true,
@@ -320,7 +222,10 @@ router.put('/clients/:id', verifySupabaseToken, async (req, res) => {
 
   } catch (error) {
     console.error('Update client error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Internal server error' 
+    });
   }
 });
 
@@ -331,22 +236,17 @@ router.put('/clients/:id', verifySupabaseToken, async (req, res) => {
 router.delete('/clients/:id', verifySupabaseToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const client = snapTalkClients.get(id);
-
-    if (!client) {
-      return res.status(404).json({ error: 'Client not found' });
-    }
-
-    // Проверяем принадлежность клиента пользователю
-    if (client.supabaseUserId !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    // Удаляем клиента и связанный API ключ
-    snapTalkClients.delete(id);
+    
+    // Сначала получаем клиента чтобы удалить API ключ
+    const client = await ClientsService.getClientById(id, req.user.id);
+    
+    // Удаляем клиента из Supabase
+    await ClientsService.deleteClient(id, req.user.id);
+    
+    // Удаляем связанный API ключ
     apiKeys.delete(client.apiKey);
 
-    console.log(`🗑️ SnapTalk client deleted: ${client.clientName} (${id})`);
+    console.log(`🗑️ SnapTalk client deleted from Supabase: ${client.clientName} (${id})`);
 
     res.json({
       success: true,
@@ -355,7 +255,18 @@ router.delete('/clients/:id', verifySupabaseToken, async (req, res) => {
 
   } catch (error) {
     console.error('Delete client error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    
+    if (error.message === 'Client not found') {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Client not found' 
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Internal server error' 
+    });
   }
 });
 
