@@ -24,7 +24,7 @@ export function generateWidgetHTML(texts) {
           <div class="snaptalk-message-tail"></div>
           <p class="snaptalk-message-text" id="snaptalk-greeting-text"></p>
           <button class="snaptalk-reply-btn snaptalk-hidden" id="snaptalk-reply">
-            ✨ \${texts.reply || 'Ответить'}
+            ✨ \${WIDGET_TEXTS.reply || 'Ответить'}
           </button>
         </div>
       </div>
@@ -45,8 +45,8 @@ export function generateChatHTML(texts) {
         </button>
         <div class="snaptalk-chat-avatar" id="snaptalk-chat-avatar"></div>
         <div class="snaptalk-chat-info">
-          <h3>\${texts.managerName || 'Поддержка'}</h3>
-          <p id="snaptalk-status">\${texts.managerStatus || 'Онлайн'}</p>
+          <h3>\${WIDGET_TEXTS.managerName || 'Поддержка'}</h3>
+          <p id="snaptalk-status">\${WIDGET_TEXTS.managerStatus || 'Онлайн'}</p>
         </div>
       </div>
       
@@ -67,7 +67,7 @@ export function generateChatHTML(texts) {
         <textarea
           id="snaptalk-input"
           class="snaptalk-input"
-          placeholder="\${texts.inputPlaceholder || 'Введите ваше сообщение...'}"
+          placeholder="\${WIDGET_TEXTS.inputPlaceholder || 'Введите ваше сообщение...'}"
           rows="1"
         ></textarea>
         <button id="snaptalk-send" class="snaptalk-send-btn" aria-label="Отправить">

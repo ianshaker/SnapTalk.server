@@ -309,6 +309,7 @@ export const chatVisualConfig = {
       greeting: "Здравствуйте! Как дела? Чем могу помочь?", // fallback greeting
       reply: "Ответить",
       placeholder: "Введите ваше сообщение...",
+      inputPlaceholder: "Введите ваше сообщение...",
       send: "Отправить",
       back: "Назад",
       managerName: "Поддержка",
@@ -318,6 +319,7 @@ export const chatVisualConfig = {
       greeting: "Hello! How are you? How can I help?", // fallback greeting
       reply: "Reply",
       placeholder: "Type your message...",
+      inputPlaceholder: "Type your message...",
       send: "Send", 
       back: "Back",
       managerName: "Support",
