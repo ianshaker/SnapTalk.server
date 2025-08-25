@@ -169,7 +169,7 @@ router.post('/clients/create', verifySupabaseToken, async (req, res) => {
     // Возвращаем данные клиента
     res.json({
       success: true,
-      client: {
+      data: {
         id: clientId,
         clientName,
         companyName,
@@ -200,16 +200,23 @@ router.get('/clients', verifySupabaseToken, async (req, res) => {
         clientName: client.clientName,
         companyName: client.companyName,
         email: client.email,
+        phone: client.phone,
         websiteUrl: client.websiteUrl,
         apiKey: client.apiKey,
         integrationStatus: client.integrationStatus,
         language: client.language,
+        widgetPosition: client.widgetPosition,
+        widgetColor: client.widgetColor,
+        widgetTitle: client.widgetTitle,
+        timezone: client.timezone,
         createdAt: client.createdAt,
-        updatedAt: client.updatedAt
+        updatedAt: client.updatedAt,
+        embedCode: `<script src="${req.protocol}://${req.get('host')}/api/widget.js?key=${client.apiKey}" async></script>`
       }));
 
     res.json({
-      clients: userClients,
+      success: true,
+      data: userClients,
       total: userClients.length
     });
 
@@ -237,7 +244,10 @@ router.get('/clients/:id', verifySupabaseToken, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    res.json({ client });
+    res.json({
+      success: true,
+      data: client
+    });
 
   } catch (error) {
     console.error('Get client error:', error);
@@ -305,7 +315,7 @@ router.put('/clients/:id', verifySupabaseToken, async (req, res) => {
 
     res.json({
       success: true,
-      client: updatedClient
+      data: updatedClient
     });
 
   } catch (error) {
