@@ -19,7 +19,7 @@ import {
 } from './src/config/env.js';
 import snapTalkRoutes from './src/routes/snapTalkClients.js';
 import widgetRoutes from './src/routes/widgets.js';
-import { apiKeys } from './src/routes/snapTalkClients.js';
+import { apiKeys, loadActiveClientsToApiKeys } from './src/routes/snapTalkClients.js';
 
 const app = express();
 
@@ -340,7 +340,7 @@ function pushToClient(clientId, payload) {
 }
 
 // Старт
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log('🚀 SnapTalk Server listening on port', PORT);
   console.log('🔧 Environment check:');
   console.log('  - BOT_TOKEN:', BOT_TOKEN ? 'SET' : 'NOT SET');
@@ -352,4 +352,7 @@ server.listen(PORT, () => {
   console.log('📡 Webhook URL: /telegram/webhook/' + WEBHOOK_SECRET);
   console.log('🎯 SnapTalk Frontend integration:', sbAuth ? 'ENABLED' : 'DISABLED');
   console.log('🔗 CORS allowed origins:', allowedOrigins.join(', '));
+  
+  // Загружаем активные клиенты в apiKeys
+  await loadActiveClientsToApiKeys();
 });

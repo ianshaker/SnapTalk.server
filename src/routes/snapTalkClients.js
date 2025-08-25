@@ -1,7 +1,7 @@
 import express from 'express';
 import { verifySupabaseToken } from '../middleware/auth.js';
 import { chatVisualConfig } from '../config/chatConfig.js';
-import { ClientsService } from '../config/supabase.js';
+import { ClientsService, supabaseDB } from '../config/supabase.js';
 
 const router = express.Router();
 
@@ -16,6 +16,82 @@ export const apiKeys = new Map([
     created: new Date().toISOString()
   }]
 ]);
+
+// ===== Загрузка активных клиентов в apiKeys при старте сервера =====
+export async function loadActiveClientsToApiKeys() {
+  try {
+    console.log('🔄 Loading active clients into apiKeys...');
+    
+    const { data: activeClients, error } = await supabaseDB
+      .from('clients')
+      .select('*')
+      .eq('integration_status', 'active');
+
+    if (error) {
+      console.error('❌ Failed to load active clients:', error);
+      return;
+    }
+
+    if (!activeClients || activeClients.length === 0) {
+      console.log('📋 No active clients found');
+      return;
+    }
+
+    for (const dbClient of activeClients) {
+      const client = ClientsService.formatClientResponse(dbClient);
+      
+      // Создаем кастомную конфигурацию виджета
+      const customConfig = {
+        ...chatVisualConfig,
+        position: {
+          ...chatVisualConfig.position,
+          bottom: client.widgetPosition?.includes('bottom') ? '1.5rem' : 'auto',
+          top: client.widgetPosition?.includes('top') ? '1.5rem' : 'auto',
+          right: client.widgetPosition?.includes('right') ? '1.5rem' : 'auto',
+          left: client.widgetPosition?.includes('left') ? '1.5rem' : 'auto'
+        },
+        minimizedButton: {
+          ...chatVisualConfig.minimizedButton,
+          backgroundColor: client.widgetColor || '#70B347'
+        },
+        texts: {
+          ...chatVisualConfig.texts,
+          [client.language || 'ru']: {
+            ...chatVisualConfig.texts[client.language || 'ru'],
+            managerName: client.widgetTitle || 'Поддержка'
+          }
+        }
+      };
+
+      try {
+        const domain = client.websiteUrl ? new URL(client.websiteUrl).hostname : '*';
+        apiKeys.set(client.apiKey, {
+          clientName: client.clientName,
+          domain,
+          config: customConfig,
+          language: client.language || 'ru',
+          created: client.createdAt,
+          snapTalkClientId: client.id
+        });
+      } catch (urlError) {
+        apiKeys.set(client.apiKey, {
+          clientName: client.clientName,
+          domain: '*',
+          config: customConfig,
+          language: client.language || 'ru',
+          created: client.createdAt,
+          snapTalkClientId: client.id
+        });
+      }
+    }
+
+    console.log(`✅ Loaded ${activeClients.length} active clients into apiKeys`);
+    console.log(`🔑 Total API keys available: ${apiKeys.size}`);
+    
+  } catch (error) {
+    console.error('💥 Error loading active clients:', error);
+  }
+}
 
 /**
  * Создание нового клиента из фронтенда SnapTalk
@@ -263,6 +339,109 @@ router.delete('/clients/:id', verifySupabaseToken, async (req, res) => {
       });
     }
     
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Internal server error' 
+    });
+  }
+});
+
+/**
+ * Активация клиента - изменение статуса на 'active'
+ * PUT /clients/:id/activate
+ */
+router.put('/clients/:id/activate', verifySupabaseToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Обновляем статус на 'active'
+    const updatedClient = await ClientsService.updateClient(id, req.user.id, {
+      integration_status: 'active'
+    });
+
+    // Убеждаемся что API ключ добавлен в систему виджетов
+    if (!apiKeys.has(updatedClient.apiKey)) {
+      // Создаем кастомную конфигурацию виджета
+      const customConfig = {
+        ...chatVisualConfig,
+        position: {
+          ...chatVisualConfig.position,
+          bottom: updatedClient.widgetPosition?.includes('bottom') ? '1.5rem' : 'auto',
+          top: updatedClient.widgetPosition?.includes('top') ? '1.5rem' : 'auto',
+          right: updatedClient.widgetPosition?.includes('right') ? '1.5rem' : 'auto',
+          left: updatedClient.widgetPosition?.includes('left') ? '1.5rem' : 'auto'
+        },
+        minimizedButton: {
+          ...chatVisualConfig.minimizedButton,
+          backgroundColor: updatedClient.widgetColor || '#70B347'
+        },
+        texts: {
+          ...chatVisualConfig.texts,
+          [updatedClient.language || 'ru']: {
+            ...chatVisualConfig.texts[updatedClient.language || 'ru'],
+            managerName: updatedClient.widgetTitle || 'Поддержка'
+          }
+        }
+      };
+
+      const domain = updatedClient.websiteUrl ? new URL(updatedClient.websiteUrl).hostname : '*';
+      apiKeys.set(updatedClient.apiKey, {
+        clientName: updatedClient.clientName,
+        domain,
+        config: customConfig,
+        language: updatedClient.language || 'ru',
+        created: new Date().toISOString(),
+        snapTalkClientId: updatedClient.id
+      });
+    }
+
+    console.log(`✅ SnapTalk client activated: ${updatedClient.clientName} (${id})`);
+
+    res.json({
+      success: true,
+      data: {
+        ...updatedClient,
+        embedCode: `<script src="${req.protocol}://${req.get('host')}/api/widget.js?key=${updatedClient.apiKey}" async></script>`
+      }
+    });
+
+  } catch (error) {
+    console.error('Activate client error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Internal server error' 
+    });
+  }
+});
+
+/**
+ * Деактивация клиента - изменение статуса на 'inactive'  
+ * PUT /clients/:id/deactivate
+ */
+router.put('/clients/:id/deactivate', verifySupabaseToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Получаем клиента чтобы удалить API ключ
+    const client = await ClientsService.getClientById(id, req.user.id);
+    
+    // Обновляем статус на 'inactive'
+    const updatedClient = await ClientsService.updateClient(id, req.user.id, {
+      integration_status: 'inactive'
+    });
+
+    // Удаляем API ключ из системы виджетов
+    apiKeys.delete(client.apiKey);
+
+    console.log(`❌ SnapTalk client deactivated: ${updatedClient.clientName} (${id})`);
+
+    res.json({
+      success: true,
+      data: updatedClient
+    });
+
+  } catch (error) {
+    console.error('Deactivate client error:', error);
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Internal server error' 
