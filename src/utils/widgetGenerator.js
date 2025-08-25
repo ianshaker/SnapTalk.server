@@ -26,6 +26,8 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
       this.isOpen = false;
       this.isGreeting = true;
       this.messages = [];
+      this.ws = null;
+      this.connected = false;
       
       this.init();
     }
@@ -323,6 +325,182 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
           fill: currentColor; 
         }
         
+        /* Чат-окно */
+        .snaptalk-chat {
+          width: 350px;
+          height: 500px;
+          background: var(--snaptalk-bg);
+          border-radius: 16px;
+          box-shadow: var(--snaptalk-shadow-lg);
+          border: 1px solid var(--snaptalk-border);
+          overflow: hidden;
+          animation: snaptalk-slide-up 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          display: flex;
+          flex-direction: column;
+        }
+        
+        /* Заголовок чата */
+        .snaptalk-chat-header {
+          background: linear-gradient(135deg, var(--snaptalk-primary) 0%, var(--snaptalk-primary-hover) 100%);
+          color: white;
+          padding: 16px 20px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        
+        .snaptalk-back-btn {
+          background: none;
+          border: none;
+          color: white;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 6px;
+          transition: background 0.2s ease;
+        }
+        
+        .snaptalk-back-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .snaptalk-chat-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+        }
+        
+        .snaptalk-chat-info h3 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+        }
+        
+        .snaptalk-chat-info p {
+          margin: 0;
+          font-size: 12px;
+          opacity: 0.8;
+        }
+        
+        /* Область сообщений */
+        .snaptalk-messages {
+          flex: 1;
+          padding: 16px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        
+        /* Стили сообщений */
+        .snaptalk-message {
+          display: flex;
+          gap: 8px;
+          animation: snaptalk-fade-in-up 0.3s ease;
+        }
+        
+        .snaptalk-message.user {
+          justify-content: flex-end;
+        }
+        
+        .snaptalk-message.user .snaptalk-msg-bubble {
+          background: linear-gradient(135deg, var(--snaptalk-primary) 0%, var(--snaptalk-primary-hover) 100%);
+          color: white;
+          border-radius: 16px 16px 4px 16px;
+        }
+        
+        .snaptalk-message.manager .snaptalk-msg-bubble {
+          background: #f3f4f6;
+          color: var(--snaptalk-text);
+          border-radius: 16px 16px 16px 4px;
+        }
+        
+        .snaptalk-msg-bubble {
+          max-width: 240px;
+          padding: 10px 14px;
+          font-size: 14px;
+          line-height: 1.4;
+          word-wrap: break-word;
+        }
+        
+        .snaptalk-msg-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, var(--snaptalk-primary) 0%, var(--snaptalk-primary-hover) 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 12px;
+          flex-shrink: 0;
+        }
+        
+        /* Поле ввода */
+        .snaptalk-input-area {
+          padding: 16px;
+          border-top: 1px solid var(--snaptalk-border);
+          display: flex;
+          gap: 8px;
+          align-items: flex-end;
+        }
+        
+        .snaptalk-input {
+          flex: 1;
+          border: 1px solid var(--snaptalk-border);
+          border-radius: 20px;
+          padding: 10px 16px;
+          font-size: 14px;
+          outline: none;
+          resize: none;
+          max-height: 100px;
+          font-family: inherit;
+          transition: border-color 0.2s ease;
+        }
+        
+        .snaptalk-input:focus {
+          border-color: var(--snaptalk-primary);
+        }
+        
+        .snaptalk-send-btn {
+          background: linear-gradient(135deg, var(--snaptalk-primary) 0%, var(--snaptalk-primary-hover) 100%);
+          border: none;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+        
+        .snaptalk-send-btn:hover {
+          transform: scale(1.05);
+        }
+        
+        .snaptalk-send-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          transform: none;
+        }
+        
+        /* Индикатор печатания */
+        .snaptalk-typing-indicator {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          font-size: 12px;
+          color: var(--snaptalk-text-muted);
+          border-top: 1px solid var(--snaptalk-border);
+        }
+        
         /* Респонсивность */
         @media (max-width: 480px) {
           .snaptalk-widget {
@@ -333,6 +511,12 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
           
           .snaptalk-message-bubble {
             max-width: calc(100vw - 80px);
+          }
+          
+          .snaptalk-chat {
+            width: calc(100vw - 2rem);
+            height: calc(100vh - 4rem);
+            max-height: 600px;
           }
         }
       \`;
@@ -370,6 +554,54 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
             </div>
           </div>
         </div>
+        
+        <!-- Чат-окно -->
+        <div class="snaptalk-chat snaptalk-hidden" id="snaptalk-chat">
+          <!-- Заголовок чата -->
+          <div class="snaptalk-chat-header">
+            <button class="snaptalk-back-btn" id="snaptalk-back" aria-label="Назад">
+              <svg class="snaptalk-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+            </button>
+            <div class="snaptalk-chat-avatar">👨‍💼</div>
+            <div class="snaptalk-chat-info">
+              <h3>\${WIDGET_TEXTS.managerName || 'Поддержка'}</h3>
+              <p id="snaptalk-status">\${WIDGET_TEXTS.managerStatus || 'Онлайн'}</p>
+            </div>
+          </div>
+          
+          <!-- Область сообщений -->
+          <div class="snaptalk-messages" id="snaptalk-messages">
+            <!-- Сообщения будут добавляться здесь -->
+          </div>
+          
+          <!-- Индикатор печатания -->
+          <div class="snaptalk-typing-indicator snaptalk-hidden" id="snaptalk-typing">
+            <div class="snaptalk-typing">
+              <span class="snaptalk-typing-dot"></span>
+              <span class="snaptalk-typing-dot"></span>
+              <span class="snaptalk-typing-dot"></span>
+            </div>
+            <span>Печатает...</span>
+          </div>
+          
+          <!-- Поле ввода -->
+          <div class="snaptalk-input-area">
+            <textarea 
+              class="snaptalk-input" 
+              id="snaptalk-input" 
+              placeholder="\${WIDGET_TEXTS.placeholder || 'Введите ваше сообщение...'}"
+              rows="1"
+            ></textarea>
+            <button class="snaptalk-send-btn" id="snaptalk-send" aria-label="Отправить">
+              <svg class="snaptalk-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m22 2-7 20-4-9-9-4z"/>
+                <path d="M22 2 11 13"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       \`;
       
       document.body.appendChild(this.container);
@@ -380,6 +612,22 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
       document.getElementById('snaptalk-toggle').addEventListener('click', () => this.toggleWidget());
       document.getElementById('snaptalk-close-greeting').addEventListener('click', () => this.hideGreeting());
       document.getElementById('snaptalk-reply').addEventListener('click', () => this.openChat());
+      document.getElementById('snaptalk-back').addEventListener('click', () => this.closeChat());
+      document.getElementById('snaptalk-send').addEventListener('click', () => this.sendMessage());
+      
+      const input = document.getElementById('snaptalk-input');
+      input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          this.sendMessage();
+        }
+      });
+      
+      // Автоматическое изменение размера textarea
+      input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+      });
     }
     
     async showGreetingWithTyping() {
@@ -444,18 +692,161 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
       }
     }
     
+    connectWebSocket() {
+      try {
+        const wsUrl = SERVER_URL.replace('http', 'ws') + '/ws?clientId=' + CLIENT_ID;
+        console.log('🔗 Подключаемся к WebSocket:', wsUrl);
+        
+        this.ws = new WebSocket(wsUrl);
+        
+        this.ws.onopen = () => {
+          this.connected = true;
+          console.log('✅ WebSocket подключен');
+          this.updateConnectionStatus('Онлайн');
+        };
+        
+        this.ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log('📨 Получено сообщение:', data);
+            
+            if (data.from === 'manager') {
+              this.addMessage(data.text, 'manager');
+            }
+          } catch (error) {
+            console.error('❌ Ошибка обработки сообщения:', error);
+          }
+        };
+        
+        this.ws.onclose = () => {
+          this.connected = false;
+          console.log('🔌 WebSocket отключен');
+          this.updateConnectionStatus('Не в сети');
+          
+          // Переподключение через 3 секунды
+          setTimeout(() => {
+            if (!this.connected) {
+              this.connectWebSocket();
+            }
+          }, 3000);
+        };
+        
+        this.ws.onerror = (error) => {
+          console.error('❌ WebSocket ошибка:', error);
+          this.updateConnectionStatus('Ошибка подключения');
+        };
+      } catch (error) {
+        console.error('❌ Ошибка создания WebSocket:', error);
+      }
+    }
+    
+    updateConnectionStatus(status) {
+      const statusEl = document.getElementById('snaptalk-status');
+      if (statusEl) {
+        statusEl.textContent = status;
+      }
+    }
+    
     openChat() {
       this.isOpen = true;
       this.hideGreeting();
       
-      // TODO: Открыть полноценный чат
-      alert('🚀 Чат откроется! Консультант: ' + (WIDGET_TEXTS.managerName || 'Поддержка'));
+      // Показываем чат
+      document.getElementById('snaptalk-toggle').classList.add('snaptalk-hidden');
+      document.getElementById('snaptalk-chat').classList.remove('snaptalk-hidden');
+      
+      // Подключаемся к WebSocket
+      if (!this.connected) {
+        this.connectWebSocket();
+      }
+      
+      // Добавляем приветственное сообщение в чат
+      if (this.messages.length === 0) {
+        setTimeout(() => {
+          this.addMessage(WIDGET_TEXTS.greeting || 'Здравствуйте! Как дела? Чем могу помочь?', 'manager');
+        }, 500);
+      }
+      
       console.log('💬 Чат открыт для клиента:', CLIENT_ID);
     }
     
     closeChat() {
       this.isOpen = false;
-      // TODO: Закрыть чат
+      
+      // Скрываем чат
+      document.getElementById('snaptalk-chat').classList.add('snaptalk-hidden');
+      document.getElementById('snaptalk-toggle').classList.remove('snaptalk-hidden');
+      
+      console.log('❌ Чат закрыт');
+    }
+    
+    addMessage(text, type) {
+      const messagesContainer = document.getElementById('snaptalk-messages');
+      const messageEl = document.createElement('div');
+      messageEl.className = \`snaptalk-message \${type}\`;
+      
+      if (type === 'user') {
+        messageEl.innerHTML = \`
+          <div class="snaptalk-msg-bubble">\${text}</div>
+        \`;
+      } else {
+        messageEl.innerHTML = \`
+          <div class="snaptalk-msg-avatar">👨‍💼</div>
+          <div class="snaptalk-msg-bubble">\${text}</div>
+        \`;
+      }
+      
+      messagesContainer.appendChild(messageEl);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      
+      this.messages.push({ text, type, timestamp: Date.now() });
+    }
+    
+    async sendMessage() {
+      const input = document.getElementById('snaptalk-input');
+      const sendBtn = document.getElementById('snaptalk-send');
+      const text = input.value.trim();
+      
+      if (!text) return;
+      
+      // Добавляем сообщение пользователя
+      this.addMessage(text, 'user');
+      input.value = '';
+      input.style.height = 'auto';
+      
+      // Отключаем кнопку отправки
+      sendBtn.disabled = true;
+      
+      try {
+        console.log('📤 Отправляем сообщение:', text);
+        
+        const response = await fetch(SERVER_URL + '/api/chat/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: CLIENT_ID,
+            text: text,
+            meta: {
+              url: window.location.href,
+              title: document.title,
+              timestamp: Date.now()
+            }
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+        }
+        
+        const result = await response.json();
+        console.log('✅ Сообщение отправлено:', result);
+        
+      } catch (error) {
+        console.error('❌ Ошибка отправки сообщения:', error);
+        this.addMessage('Ошибка отправки сообщения. Попробуйте еще раз.', 'manager');
+      } finally {
+        sendBtn.disabled = false;
+      }
     }
   }
   
