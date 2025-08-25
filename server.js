@@ -54,6 +54,35 @@ app.use(bodyParser.json({ limit: '1mb' }));
 const memoryMap = new Map(); // clientId -> topicId
 
 // ===== Утилиты для базы данных =====
+async function findClientByWidget(clientId) {
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb
+      .from('clients')
+      .select('*')
+      .eq('integration_status', 'active')
+      .limit(1000);
+    
+    if (error) {
+      console.error('❌ Error finding client:', error);
+      return null;
+    }
+    
+    // Ищем клиента через API ключи (clientId содержит префикс от API ключа)
+    for (const client of data || []) {
+      if (clientId.includes(client.api_key.split('-')[1])) {
+        return client;
+      }
+    }
+    
+    console.log(`❌ No matching client found for clientId: ${clientId}`);
+    return null;
+  } catch (error) {
+    console.error('❌ findClientByWidget error:', error);
+    return null;
+  }
+}
+
 async function dbGetTopic(clientId) {
   if (!sb) return memoryMap.get(clientId) || null;
   const { data, error } = await sb
@@ -74,41 +103,53 @@ async function dbSaveTopic(clientId, topicId) {
 }
 
 // ===== Telegram helpers =====
-async function ensureTopic(clientId) {
+async function ensureTopic(clientId, client) {
   let topicId = await dbGetTopic(clientId);
   if (topicId) return topicId;
 
-  if (!BOT_TOKEN || !SUPERGROUP_ID) {
-    throw new Error('Telegram env vars not set (BOT_TOKEN or SUPERGROUP_ID)');
+  // Используем настройки клиента
+  const botToken = client?.telegram_bot_token || BOT_TOKEN;
+  const groupId = client?.telegram_group_id || SUPERGROUP_ID;
+
+  if (!botToken || !groupId) {
+    throw new Error(`Telegram settings not configured for client ${client?.client_name || clientId}`);
   }
 
-  const title = `Client #${clientId}`;
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/createForumTopic`;
+  const title = \`Client #\${clientId} (\${client?.client_name || 'Unknown'})\`;
+  const url = \`https://api.telegram.org/bot\${botToken}/createForumTopic\`;
   const { data } = await axios.post(url, {
-    chat_id: SUPERGROUP_ID,
+    chat_id: groupId,
     name: title
   });
   if (!data?.ok) throw new Error('createForumTopic failed: ' + JSON.stringify(data));
   topicId = data.result.message_thread_id;
 
   await dbSaveTopic(clientId, topicId);
+  console.log(\`✅ Created topic \${topicId} for client \${client?.client_name || clientId}\`);
   return topicId;
 }
 
-async function sendToTopic({ clientId, text, prefix = '' }) {
-  const topicId = await ensureTopic(clientId);
+async function sendToTopic({ clientId, text, prefix = '', client }) {
+  const topicId = await ensureTopic(clientId, client);
 
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-  const msg = `${prefix}${text}`.slice(0, 4096);
+  // Используем настройки клиента
+  const botToken = client?.telegram_bot_token || BOT_TOKEN;
+  const groupId = client?.telegram_group_id || SUPERGROUP_ID;
+
+  const url = \`https://api.telegram.org/bot\${botToken}/sendMessage\`;
+  const msg = \`\${prefix}\${text}\`.slice(0, 4096);
   const payload = {
-    chat_id: SUPERGROUP_ID,
+    chat_id: groupId,
     message_thread_id: topicId,
     text: msg,
     parse_mode: 'HTML',
     disable_web_page_preview: true
   };
+  
+  console.log(\`📤 Sending to Telegram: bot=\${botToken.slice(0,10)}..., group=\${groupId}, topic=\${topicId}\`);
   const { data } = await axios.post(url, payload);
   if (!data?.ok) throw new Error('sendMessage failed: ' + JSON.stringify(data));
+  console.log(\`✅ Message sent to Telegram topic \${topicId}\`);
   return data.result;
 }
 
@@ -321,6 +362,13 @@ app.post('/api/chat/send', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'clientId and text required' });
     }
 
+    // Находим клиента и его Telegram настройки
+    const client = await findClientByWidget(clientId);
+    if (!client) {
+      console.log(`❌ Client not found for clientId: ${clientId}`);
+      return res.status(404).json({ ok: false, error: 'Client not found' });
+    }
+
     const utm = meta?.utm || {};
     const ref = meta?.ref || '';
     const prefixParts = [
@@ -332,8 +380,8 @@ app.post('/api/chat/send', async (req, res) => {
     ].filter(Boolean);
     const prefix = prefixParts.length ? `${prefixParts.join(' / ')}\n\n` : `#${clientId}\n\n`;
 
-    console.log(`💬 Site → Telegram: "${text}" → ${clientId}`);
-    await sendToTopic({ clientId, text, prefix });
+    console.log(`💬 Site → Telegram: "${text}" → ${clientId} (${client.client_name})`);
+    await sendToTopic({ clientId, text, prefix, client });
     return res.json({ ok: true });
   } catch (e) {
     console.error(e);
