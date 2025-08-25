@@ -37,8 +37,8 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
       this.loadStyles();
       this.createWidget();
       
-      // Показываем приветствие через 3 секунды
-      setTimeout(() => this.showGreetingWithTyping(), 3000);
+      // Показываем приветствие сразу после загрузки страницы (минимальная задержка)
+      setTimeout(() => this.showGreetingWithTyping(), 1000);
     }
     
     loadStyles() {
@@ -539,8 +539,8 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
       this.container = document.createElement('div');
       this.container.className = 'snaptalk-widget';
       this.container.innerHTML = \`
-        <!-- Минимизированная кнопка -->
-        <button class="snaptalk-btn" id="snaptalk-toggle" aria-label="Открыть чат">
+        <!-- Минимизированная кнопка (скрыта по умолчанию) -->
+        <button class="snaptalk-btn snaptalk-hidden" id="snaptalk-toggle" aria-label="Открыть чат">
           <svg class="snaptalk-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
           </svg>
@@ -707,10 +707,17 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
     
     hideGreeting() {
       const greetingEl = document.getElementById('snaptalk-greeting');
+      const toggleBtn = document.getElementById('snaptalk-toggle');
+      
       greetingEl.style.animation = 'snaptalk-slide-up 0.3s ease reverse';
       setTimeout(() => {
         greetingEl.classList.add('snaptalk-hidden');
         greetingEl.style.animation = '';
+        
+        // Показываем кружок только если чат НЕ открыт
+        if (!this.isOpen) {
+          toggleBtn.classList.remove('snaptalk-hidden');
+        }
       }, 300);
     }
     
@@ -781,7 +788,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
       this.isOpen = true;
       this.hideGreeting();
       
-      // Показываем чат
+      // Показываем чат и скрываем кружок
       document.getElementById('snaptalk-toggle').classList.add('snaptalk-hidden');
       document.getElementById('snaptalk-chat').classList.remove('snaptalk-hidden');
       
