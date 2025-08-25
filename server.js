@@ -142,6 +142,40 @@ app.get('/api/admin/api-keys', (req, res) => {
   });
 });
 
+// Создание таблицы client_topics через простую проверку
+app.post('/api/admin/create-topics-table', async (req, res) => {
+  try {
+    if (!sb) {
+      return res.status(500).json({ success: false, error: 'Supabase not configured' });
+    }
+
+    console.log('🔧 Creating client_topics table...');
+
+    // Пробуем создать запись для проверки существования таблицы
+    const { error: testError } = await sb
+      .from('client_topics')
+      .select('id')
+      .limit(1);
+
+    if (testError && testError.code === 'PGRST205') {
+      // Таблица не существует - нужно создать вручную в Supabase Dashboard
+      console.log('❌ Table client_topics does not exist. Please create it manually in Supabase Dashboard.');
+      return res.json({ 
+        success: false, 
+        error: 'Table does not exist',
+        instructions: 'Please create table client_topics manually in Supabase Dashboard with SQL migration'
+      });
+    }
+
+    console.log('✅ client_topics table exists');
+    res.json({ success: true, message: 'client_topics table exists' });
+
+  } catch (error) {
+    console.error('❌ Create table error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.get('/api/admin/debug-clients', async (req, res) => {
   try {
     console.log('🔍 Debug clients request - checking Supabase connection...');
