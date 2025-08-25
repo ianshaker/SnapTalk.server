@@ -20,6 +20,7 @@ import {
 import snapTalkRoutes from './src/routes/snapTalkClients.js';
 import widgetRoutes from './src/routes/widgets.js';
 import { apiKeys, loadActiveClientsToApiKeys } from './src/routes/snapTalkClients.js';
+import { supabaseDB } from './src/config/supabase.js';
 
 const app = express();
 
@@ -139,6 +140,28 @@ app.get('/api/admin/api-keys', (req, res) => {
     apiKeys: keys,
     total: keys.length 
   });
+});
+
+app.get('/api/admin/debug-clients', async (req, res) => {
+  try {
+    const { data: allClients, error } = await supabaseDB
+      .from('clients')
+      .select('id, client_name, api_key, integration_status')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    res.json({ 
+      success: true, 
+      clients: allClients || [],
+      total: allClients?.length || 0
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // ===== Основные руты =====
