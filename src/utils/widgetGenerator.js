@@ -183,18 +183,20 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
           backdrop-filter: blur(10px);
         }
         
-        /* Хвостик сообщения */
+        /* Хвостик сообщения - стиль Telegram */
         .snaptalk-message-tail {
           position: absolute;
-          bottom: 12px;
-          left: -6px;
-          width: 12px;
-          height: 12px;
-          background: var(--snaptalk-bg);
+          bottom: 16px;
+          left: -8px;
+          width: 16px;
+          height: 16px;
+          background: linear-gradient(135deg, var(--snaptalk-bg) 0%, #f8fafc 100%);
           border: 1px solid var(--snaptalk-border);
           border-top: none;
           border-right: none;
           transform: rotate(45deg);
+          box-shadow: -2px 2px 4px rgba(0, 0, 0, 0.08);
+          border-radius: 0 0 0 3px;
         }
         
         /* Текст сообщения */
@@ -311,6 +313,15 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
           40% { 
             transform: scale(1.2); 
             opacity: 1; 
+          }
+        }
+        
+        @keyframes blink {
+          0%, 50% { 
+            opacity: 1; 
+          }
+          51%, 100% { 
+            opacity: 0; 
           }
         }
         
@@ -643,11 +654,16 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
       
       // Показываем анимацию печатания
       textEl.innerHTML = \`
-        <span class="snaptalk-typing">
-          <span class="snaptalk-typing-dot"></span>
-          <span class="snaptalk-typing-dot"></span>
-          <span class="snaptalk-typing-dot"></span>
-        </span>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
+          <span class="snaptalk-typing">
+            <span class="snaptalk-typing-dot"></span>
+            <span class="snaptalk-typing-dot"></span>
+            <span class="snaptalk-typing-dot"></span>
+          </span>
+          <span style="color: var(--snaptalk-text-muted); font-size: 13px; font-style: italic;">
+            \${WIDGET_TEXTS.managerName || 'Менеджер'} печатает...
+          </span>
+        </div>
       \`;
       
       // Через 2 секунды показываем текст
@@ -667,9 +683,22 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
         if (i < text.length) {
           element.innerHTML += text.charAt(i);
           i++;
-          setTimeout(typeChar, 40); // Чуть медленнее для читаемости
-        } else if (callback) {
-          callback();
+          
+          // Добавляем мигающий курсор во время печатания
+          const cursor = '<span style="animation: blink 1s infinite; margin-left: 1px; color: var(--snaptalk-primary);">|</span>';
+          element.innerHTML += cursor;
+          
+          setTimeout(() => {
+            // Убираем курсор перед следующим символом
+            element.innerHTML = element.innerHTML.replace(cursor, '');
+            typeChar();
+          }, Math.random() * 60 + 30); // Случайная скорость от 30 до 90ms для реалистичности
+        } else {
+          // Убираем курсор в конце и показываем финальный текст
+          element.innerHTML = text;
+          if (callback) {
+            setTimeout(callback, 800);
+          }
         }
       };
       
