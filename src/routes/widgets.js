@@ -42,7 +42,7 @@ router.get('/widget.js', async (req, res) => {
       const serverUrl = req.get('host').includes('onrender.com') 
         ? 'https://' + req.get('host')
         : req.protocol + '://' + req.get('host');
-      const widgetJS = generateWidgetJS(clientId, keyData.config, texts, serverUrl);
+      const widgetJS = generateWidgetJS(clientId, keyData.config, texts, serverUrl, apiKey);
 
       console.log(`💬 SnapTalk loaded: ${keyData.clientName} → ${domain}`);
       return res.type('application/javascript')

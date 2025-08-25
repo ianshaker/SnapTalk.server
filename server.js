@@ -54,31 +54,24 @@ app.use(bodyParser.json({ limit: '1mb' }));
 const memoryMap = new Map(); // clientId -> topicId
 
 // ===== Утилиты для базы данных =====
-async function findClientByWidget(clientId) {
-  if (!sb) return null;
+async function findClientByApiKey(apiKey) {
+  if (!sb || !apiKey) return null;
   try {
     const { data, error } = await sb
       .from('clients')
       .select('*')
+      .eq('api_key', apiKey)
       .eq('integration_status', 'active')
-      .limit(1000);
+      .maybeSingle();
     
     if (error) {
-      console.error('❌ Error finding client:', error);
+      console.error('❌ Error finding client by API key:', error);
       return null;
     }
     
-    // Ищем клиента через API ключи (clientId содержит префикс от API ключа)
-    for (const client of data || []) {
-      if (clientId.includes(client.api_key.split('-')[1])) {
-        return client;
-      }
-    }
-    
-    console.log(`❌ No matching client found for clientId: ${clientId}`);
-    return null;
+    return data;
   } catch (error) {
-    console.error('❌ findClientByWidget error:', error);
+    console.error('❌ findClientByApiKey error:', error);
     return null;
   }
 }
@@ -357,15 +350,15 @@ app.get('/', (req, res) => {
 // ===== API: сайт -> Telegram =====
 app.post('/api/chat/send', async (req, res) => {
   try {
-    const { clientId, text, meta } = req.body || {};
+    const { clientId, apiKey, text, meta } = req.body || {};
     if (!clientId || !text) {
       return res.status(400).json({ ok: false, error: 'clientId and text required' });
     }
 
-    // Находим клиента и его Telegram настройки
-    const client = await findClientByWidget(clientId);
+    // Находим клиента по API ключу
+    const client = await findClientByApiKey(apiKey);
     if (!client) {
-      console.log(`❌ Client not found for clientId: ${clientId}`);
+      console.log(`❌ Client not found for apiKey: ${apiKey}`);
       return res.status(404).json({ ok: false, error: 'Client not found' });
     }
 

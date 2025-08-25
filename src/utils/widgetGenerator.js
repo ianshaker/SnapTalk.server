@@ -1,5 +1,5 @@
 // ===== Генератор JavaScript кода виджета =====
-export function generateWidgetJS(clientId, config, texts, serverUrl) {
+export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = '') {
   const widgetColor = config.minimizedButton?.backgroundColor || '#70B347';
   const hoverColor = config.minimizedButton?.hoverBackgroundColor || '#5a9834';
   const position = config.position || {};
@@ -17,6 +17,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
   // Конфигурация
   const WIDGET_TEXTS = ${JSON.stringify(texts, null, 2)};
   const CLIENT_ID = '${clientId}';
+  const API_KEY = '${apiKey}';
   const SERVER_URL = '${serverUrl}';
   const WIDGET_COLOR = '${widgetColor}';
   const HOVER_COLOR = '${hoverColor}';
@@ -825,6 +826,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             clientId: CLIENT_ID,
+            apiKey: API_KEY,
             text: text,
             meta: {
               url: window.location.href,
