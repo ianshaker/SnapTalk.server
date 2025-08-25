@@ -42,7 +42,7 @@ router.get('/widget.js', async (req, res) => {
       const serverUrl = req.get('host').includes('onrender.com') 
         ? 'https://' + req.get('host')
         : req.protocol + '://' + req.get('host');
-      const widgetJS = generateWidgetJS(clientId, keyData.config, texts, serverUrl, apiKey);
+      const widgetJS = generateWidgetJS(clientId, keyData.config, texts, serverUrl, apiKey, keyData.managerAvatarUrl);
 
       console.log(`💬 SnapTalk loaded: ${keyData.clientName} → ${domain}`);
       return res.type('application/javascript')
@@ -65,47 +65,45 @@ router.get('/widget.js', async (req, res) => {
       return res.status(404).type('application/javascript').send('console.error("SnapTalk: Client not found");');
     }
 
-    // Простой тестовый виджет из Supabase данных
-    const widgetCode = `
-// SnapTalk Widget for ${client.client_name} (from Supabase)
-console.log("🚀 SnapTalk Widget loaded for: ${client.client_name}");
-
-(function() {
-  const widget = document.createElement('div');
-  widget.id = 'snaptalk-widget';
-  widget.style.cssText = \`
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 60px;
-    height: 60px;
-    background: ${client.widget_color || '#70B347'};
-    border-radius: 50%;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 9999;
-    font-family: Arial, sans-serif;
-    font-size: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  \`;
-  widget.innerHTML = '💬';
-  widget.title = '${client.widget_title || 'Чат поддержки'}';
-
-  widget.onclick = function() {
-    alert('SnapTalk активирован!\\nКлиент: ${client.client_name}\\nAPI: ${apiKey}');
-  };
-
-  document.body.appendChild(widget);
-  console.log('✅ SnapTalk Widget добавлен на страницу');
-})();
-`;
+    // Генерируем полноценный виджет из Supabase данных  
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000);
+    const supabaseClientId = `client-${timestamp}-${random}`;
+    
+    // Создаем конфигурацию из данных Supabase
+    const supabaseConfig = {
+      position: { bottom: '1.5rem', right: '1.5rem', zIndex: 9999 },
+      minimizedButton: {
+        backgroundColor: client.widget_color || '#70B347',
+        hoverBackgroundColor: '#5a9834'
+      },
+      texts: {
+        ru: {
+          greeting: 'Здравствуйте! Меня зовут Сергей. Я готов вас проконсультировать. Какие у вас вопросы?',
+          reply: 'Ответить',
+          managerName: client.widget_title || 'Поддержка',
+          managerStatus: 'Онлайн'
+        }
+      }
+    };
+    
+    const supabaseTexts = supabaseConfig.texts.ru;
+    const serverUrl = req.get('host').includes('onrender.com') 
+      ? 'https://' + req.get('host')
+      : req.protocol + '://' + req.get('host');
+      
+    const widgetCode = generateWidgetJS(
+      supabaseClientId, 
+      supabaseConfig, 
+      supabaseTexts, 
+      serverUrl, 
+      apiKey,
+      client.manager_avatar_url
+    );
 
     console.log(`💬 SnapTalk loaded: ${client.client_name} → ${domain} (from DB)`);
     
-    res.type('application/javascript')
+    return res.type('application/javascript')
       .header('Access-Control-Allow-Origin', '*')
       .header('Cache-Control', 'no-cache, no-store, must-revalidate')
       .header('Pragma', 'no-cache')

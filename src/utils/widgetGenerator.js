@@ -1,5 +1,5 @@
 // ===== Генератор JavaScript кода виджета =====
-export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = '') {
+export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = '', managerAvatarUrl = '') {
   const widgetColor = config.minimizedButton?.backgroundColor || '#70B347';
   const hoverColor = config.minimizedButton?.hoverBackgroundColor || '#5a9834';
   const position = config.position || {};
@@ -21,6 +21,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
   const SERVER_URL = '${serverUrl}';
   const WIDGET_COLOR = '${widgetColor}';
   const HOVER_COLOR = '${hoverColor}';
+  const MANAGER_AVATAR_URL = '${managerAvatarUrl}';
   
   class SnapTalkWidget {
     constructor() {
@@ -36,6 +37,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
     init() {
       this.loadStyles();
       this.createWidget();
+      this.setupAvatar();
       
       // Показываем приветствие сразу после загрузки страницы (минимальная задержка)
       setTimeout(() => this.showGreetingWithTyping(), 1000);
@@ -156,8 +158,8 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
         
         /* Аватар */
         .snaptalk-avatar {
-          width: 36px;
-          height: 36px;
+          width: 40px;
+          height: 40px;
           border-radius: 50%;
           background: linear-gradient(135deg, var(--snaptalk-primary) 0%, var(--snaptalk-primary-hover) 100%);
           display: flex;
@@ -168,6 +170,26 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
           font-size: 16px;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           border: 3px solid var(--snaptalk-bg);
+          overflow: hidden;
+          position: relative;
+        }
+        
+        /* Изображение аватара */
+        .snaptalk-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
+          position: absolute;
+          top: 0;
+          left: 0;
+        }
+        
+        /* Фолбэк аватар */
+        .snaptalk-avatar-fallback {
+          font-size: 16px;
+          color: white;
+          z-index: 1;
         }
         
         /* Пузырь сообщения */
@@ -384,6 +406,15 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
           align-items: center;
           justify-content: center;
           font-size: 16px;
+          overflow: hidden;
+          position: relative;
+        }
+        
+        .snaptalk-chat-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
         }
         
         .snaptalk-chat-info h3 {
@@ -556,7 +587,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
           </button>
           
           <div class="snaptalk-greeting-container">
-            <div class="snaptalk-avatar">👋</div>
+            <div class="snaptalk-avatar" id="snaptalk-avatar"></div>
             <div class="snaptalk-message-bubble">
               <div class="snaptalk-message-tail"></div>
               <p class="snaptalk-message-text" id="snaptalk-greeting-text"></p>
@@ -576,7 +607,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
                 <path d="m15 18-6-6 6-6"/>
               </svg>
             </button>
-            <div class="snaptalk-chat-avatar">👨‍💼</div>
+            <div class="snaptalk-chat-avatar" id="snaptalk-chat-avatar"></div>
             <div class="snaptalk-chat-info">
               <h3>\${WIDGET_TEXTS.managerName || 'Поддержка'}</h3>
               <p id="snaptalk-status">\${WIDGET_TEXTS.managerStatus || 'Онлайн'}</p>
@@ -618,6 +649,47 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
       
       document.body.appendChild(this.container);
       this.bindEvents();
+    }
+    
+    setupAvatar() {
+      const avatarEl = document.getElementById('snaptalk-avatar');
+      const chatAvatarEl = document.getElementById('snaptalk-chat-avatar');
+      
+      if (MANAGER_AVATAR_URL && MANAGER_AVATAR_URL.trim()) {
+        // Настройка аватара в приветствии
+        if (avatarEl) {
+          const img = document.createElement('img');
+          img.src = MANAGER_AVATAR_URL;
+          img.alt = WIDGET_TEXTS.managerName || 'Менеджер';
+          
+          img.onerror = () => {
+            avatarEl.innerHTML = '<span class="snaptalk-avatar-fallback">👤</span>';
+          };
+          
+          avatarEl.appendChild(img);
+        }
+        
+        // Настройка аватара в чате
+        if (chatAvatarEl) {
+          const chatImg = document.createElement('img');
+          chatImg.src = MANAGER_AVATAR_URL;
+          chatImg.alt = WIDGET_TEXTS.managerName || 'Менеджер';
+          
+          chatImg.onerror = () => {
+            chatAvatarEl.innerHTML = '👨‍💼';
+          };
+          
+          chatAvatarEl.appendChild(chatImg);
+        }
+      } else {
+        // Показываем фолбэк эмодзи
+        if (avatarEl) {
+          avatarEl.innerHTML = '<span class="snaptalk-avatar-fallback">👋</span>';
+        }
+        if (chatAvatarEl) {
+          chatAvatarEl.innerHTML = '👨‍💼';
+        }
+      }
     }
     
     bindEvents() {

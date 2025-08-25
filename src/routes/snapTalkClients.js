@@ -89,7 +89,8 @@ export async function loadActiveClientsToApiKeys() {
           config: customConfig,
           language: client.language || 'ru',
           created: client.createdAt,
-          snapTalkClientId: client.id
+          snapTalkClientId: client.id,
+          managerAvatarUrl: client.managerAvatarUrl
         });
       } catch (urlError) {
         apiKeys.set(client.apiKey, {
@@ -98,7 +99,8 @@ export async function loadActiveClientsToApiKeys() {
           config: customConfig,
           language: client.language || 'ru',
           created: client.createdAt,
-          snapTalkClientId: client.id
+          snapTalkClientId: client.id,
+          managerAvatarUrl: client.managerAvatarUrl
         });
       }
     }
@@ -171,7 +173,8 @@ router.post('/clients/create', verifySupabaseToken, async (req, res) => {
         config: customConfig,
         language: clientData.language || 'ru',
         created: new Date().toISOString(),
-        snapTalkClientId: newClient.id
+        snapTalkClientId: newClient.id,
+        managerAvatarUrl: clientData.managerAvatarUrl
       });
     } catch (urlError) {
       apiKeys.set(clientData.apiKey, {
@@ -180,7 +183,8 @@ router.post('/clients/create', verifySupabaseToken, async (req, res) => {
         config: customConfig,
         language: clientData.language || 'ru',
         created: new Date().toISOString(),
-        snapTalkClientId: newClient.id
+        snapTalkClientId: newClient.id,
+        managerAvatarUrl: clientData.managerAvatarUrl
       });
     }
 
@@ -303,7 +307,8 @@ router.put('/clients/:id', verifySupabaseToken, async (req, res) => {
         apiKeys.set(updatedClient.apiKey, {
           ...apiKeyData,
           config: customConfig,
-          language: updatedClient.language
+          language: updatedClient.language,
+          managerAvatarUrl: updatedClient.managerAvatarUrl
         });
       }
     }
@@ -410,7 +415,8 @@ router.put('/clients/:id/activate', verifySupabaseToken, async (req, res) => {
         config: customConfig,
         language: updatedClient.language || 'ru',
         created: new Date().toISOString(),
-        snapTalkClientId: updatedClient.id
+        snapTalkClientId: updatedClient.id,
+        managerAvatarUrl: updatedClient.managerAvatarUrl
       });
     }
 

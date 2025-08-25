@@ -152,6 +152,7 @@ export class ClientsService {
       workingHoursEnabled: dbClient.working_hours_enabled,
       offlineMessage: dbClient.offline_message,
       emailNotifications: dbClient.email_notifications,
+      managerAvatarUrl: dbClient.manager_avatar_url,
       comments: dbClient.comments,
       createdAt: dbClient.created_at,
       updatedAt: dbClient.updated_at
