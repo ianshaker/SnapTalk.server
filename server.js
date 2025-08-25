@@ -1,25 +1,27 @@
+import http from 'http';
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import axios from 'axios';
+import { WebSocketServer } from 'ws';
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * ENV (ставим на Render → Settings → Environment):
+ * ENV (Render → Settings → Environment):
  * - TELEGRAM_BOT_TOKEN        // токен бота из BotFather
- * - TELEGRAM_SUPERGROUP_ID    // ИД супергруппы с включённым Forum, ВНИМАНИЕ: с минусом! пример: -1002996396033
+ * - TELEGRAM_SUPERGROUP_ID    // ИД супергруппы с включённым Forum (обязательно с минусом, напр. -1002996396033)
  * - TELEGRAM_WEBHOOK_SECRET   // произвольная строка для секьюрного пути вебхука
  * - SUPABASE_URL              // (опц.) URL проекта Supabase
- * - SUPABASE_SERVICE_ROLE     // (опц.) сервисный ключ Supabase (только на сервер!)
+ * - SUPABASE_SERVICE_ROLE     // (опц.) service role ключ Supabase (ТОЛЬКО НА СЕРВЕРЕ)
  */
 
 const app = express();
 
-// Разрешаем запросы только с твоего сайта и поддоменов *.lovable.app
+// CORS: разрешаем твой сайт и *.lovable.app
 const allowed = ['https://savov.lovable.app'];
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // health, Postman
+    if (!origin) return cb(null, true); // health, Postman, Telegram webhook
     if (allowed.includes(origin) || /\.lovable\.app$/i.test(origin)) return cb(null, true);
     return cb(new Error('Not allowed by CORS'));
   },
@@ -37,12 +39,17 @@ const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || 'dev-secret';
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE;
 
-// Клиент Supabase (если заданы переменные)
+// Supabase client (если заданы переменные)
 const sb = (SUPABASE_URL && SUPABASE_SERVICE_ROLE)
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
   : null;
 
-// Простейший in-memory кэш (на случай, если Supabase не подключён)
+// ===== Доп. утилиты / тестовые руты =====
+app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
+app.get('/', (_req, res) => res.type('text/plain').send('sunray-livechat-new OK'));
+app.get('/favicon.ico', (_req, res) => res.sendStatus(204));
+
+// ===== Хранилище связок clientId <-> topicId =====
 const memoryMap = new Map(); // clientId -> topicId
 
 async function dbGetTopic(clientId) {
@@ -64,7 +71,7 @@ async function dbSaveTopic(clientId, topicId) {
   if (error) console.error('dbSaveTopic error', error);
 }
 
-// Создать топик (forum topic) в супергруппе и запомнить маппинг
+// ===== Telegram helpers =====
 async function ensureTopic(clientId) {
   let topicId = await dbGetTopic(clientId);
   if (topicId) return topicId;
@@ -86,12 +93,11 @@ async function ensureTopic(clientId) {
   return topicId;
 }
 
-// Отправить сообщение в нужный топик
 async function sendToTopic({ clientId, text, prefix = '' }) {
   const topicId = await ensureTopic(clientId);
 
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-  const msg = `${prefix}${text}`.slice(0, 4096); // ограничение Telegram
+  const msg = `${prefix}${text}`.slice(0, 4096);
   const payload = {
     chat_id: SUPERGROUP_ID,
     message_thread_id: topicId,
@@ -104,11 +110,8 @@ async function sendToTopic({ clientId, text, prefix = '' }) {
   return data.result;
 }
 
-// Healthcheck
-app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
-
+// ===== API: сайт -> Telegram =====
 /**
- * Вход от сайта (посетитель пишет в модалке)
  * body: { clientId: string, text: string, meta?: { utm?, ref? } }
  */
 app.post('/api/chat/send', async (req, res) => {
@@ -137,8 +140,8 @@ app.post('/api/chat/send', async (req, res) => {
   }
 });
 
+// ===== Webhook: Telegram -> сайт (ответ менеджера) =====
 /**
- * Вебхук Телеграма (ответ менеджера → на сайт)
  * Путь: https://<render-app>.onrender.com/telegram/webhook/<WEBHOOK_SECRET>
  */
 app.post(`/telegram/webhook/${WEBHOOK_SECRET}`, async (req, res) => {
@@ -172,8 +175,7 @@ app.post(`/telegram/webhook/${WEBHOOK_SECRET}`, async (req, res) => {
 
     if (!clientId) return res.sendStatus(200);
 
-    // Дальше два пути доставки в браузер:
-    // 1) Supabase Realtime Broadcast (если фронт подписан на client:<id>)
+    // 1) Supabase Broadcast (если подключён)
     if (sb) {
       await sb.channel(`client:${clientId}`).send({
         type: 'broadcast',
@@ -181,7 +183,9 @@ app.post(`/telegram/webhook/${WEBHOOK_SECRET}`, async (req, res) => {
         payload: { from: 'manager', text, ts: Date.now() }
       });
     }
-    // 2) Либо свой WebSocket-хаб — добавим при необходимости.
+
+    // 2) WebSocket push (всегда, если есть активные подписчики)
+    pushToClient(clientId, { from: 'manager', text, ts: Date.now() });
 
     return res.sendStatus(200);
   } catch (e) {
@@ -190,6 +194,44 @@ app.post(`/telegram/webhook/${WEBHOOK_SECRET}`, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+// ===== HTTP+WS сервер и WS-хаб =====
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server, path: '/ws' });
+
+// clientId -> Set<WebSocket>
+const hub = new Map();
+
+wss.on('connection', (ws, req) => {
+  try {
+    const url = new URL(req.url, 'http://localhost'); // path и query
+    const clientId = url.searchParams.get('clientId');
+    if (!clientId) { ws.close(1008, 'clientId required'); return; }
+
+    let set = hub.get(clientId);
+    if (!set) { set = new Set(); hub.set(clientId, set); }
+    set.add(ws);
+
+    ws.on('close', () => {
+      const s = hub.get(clientId);
+      if (!s) return;
+      s.delete(ws);
+      if (!s.size) hub.delete(clientId);
+    });
+  } catch {
+    try { ws.close(); } catch {}
+  }
+});
+
+function pushToClient(clientId, payload) {
+  const set = hub.get(clientId);
+  if (!set || !set.size) return;
+  const data = JSON.stringify(payload);
+  for (const ws of set) {
+    try { ws.send(data); } catch {}
+  }
+}
+
+// Старт
+server.listen(PORT, () => {
   console.log('Server listening on', PORT);
 });
