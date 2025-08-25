@@ -1,6 +1,6 @@
 import express from 'express';
 import { generateWidgetJS } from '../utils/widgetGenerator.js';
-import { apiKeys } from './snapTalkClients.js';
+import { apiKeys, updateClientInApiKeys } from './snapTalkClients.js';
 import { supabaseDB } from '../config/supabase.js';
 
 const router = express.Router();
@@ -19,40 +19,7 @@ router.get('/widget.js', async (req, res) => {
       return res.status(400).type('application/javascript').send('console.error("SnapTalk: API key required");');
     }
 
-    // Проверяем в Map (быстрее)
-    const keyData = apiKeys.get(apiKey);
-    
-    if (keyData) {
-      // Проверка домена (если не *)
-      const origin = req.get('Origin') || req.get('Referer');
-      if (keyData.domain !== '*' && origin && !origin.includes(keyData.domain)) {
-        console.log(`🚫 Widget blocked: ${keyData.clientName} - wrong domain (${domain})`);
-        return res.status(403).type('application/javascript').send('console.error("SnapTalk: Domain not allowed");');
-      }
-
-      // Генерируем уникальный clientId
-      const timestamp = Date.now();
-      const random = Math.floor(Math.random() * 1000);
-      const clientId = `client-${timestamp}-${random}`;
-
-      // Получаем тексты для языка
-      const texts = keyData.config.texts[keyData.language] || keyData.config.texts.ru;
-
-      // Генерируем JavaScript код виджета - принудительно HTTPS для Render.com
-      const serverUrl = req.get('host').includes('onrender.com') 
-        ? 'https://' + req.get('host')
-        : req.protocol + '://' + req.get('host');
-      const widgetJS = generateWidgetJS(clientId, keyData.config, texts, serverUrl, apiKey, keyData.managerAvatarUrl);
-
-      console.log(`💬 SnapTalk loaded: ${keyData.clientName} → ${domain}`);
-      return res.type('application/javascript')
-        .header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        .header('Pragma', 'no-cache')
-        .header('Expires', '0')
-        .send(widgetJS);
-    }
-
-    // Если не найден в Map, проверяем Supabase напрямую
+    // ВСЕГДА загружаем актуальные данные из Supabase (для синхронизации с фронтендом)
     const { data: client, error } = await supabaseDB
       .from('clients')
       .select('*')
@@ -63,6 +30,16 @@ router.get('/widget.js', async (req, res) => {
     if (error || !client) {
       console.log(`❌ Widget failed: Invalid API key from ${domain}`);
       return res.status(404).type('application/javascript').send('console.error("SnapTalk: Client not found");');
+    }
+
+    // Проверяем домен из кэша (для безопасности)
+    const keyData = apiKeys.get(apiKey);
+    if (keyData && keyData.domain !== '*') {
+      const origin = req.get('Origin') || req.get('Referer');
+      if (origin && !origin.includes(keyData.domain)) {
+        console.log(`🚫 Widget blocked: ${client.client_name} - wrong domain (${domain})`);
+        return res.status(403).type('application/javascript').send('console.error("SnapTalk: Domain not allowed");');
+      }
     }
 
     // Генерируем полноценный виджет из Supabase данных  
@@ -80,8 +57,8 @@ router.get('/widget.js', async (req, res) => {
       texts: {
         ru: {
           greeting: 'Здравствуйте! Меня зовут Сергей. Я готов вас проконсультировать. Какие у вас вопросы?',
-          reply: 'Ответить',
-          managerName: client.widget_title || 'Поддержка',
+          reply: 'Ответить', 
+          managerName: client.widget_title || client.client_name || 'Поддержка',
           managerStatus: 'Онлайн'
         }
       }
@@ -101,7 +78,12 @@ router.get('/widget.js', async (req, res) => {
       client.manager_avatar_url
     );
 
-    console.log(`💬 SnapTalk loaded: ${client.client_name} → ${domain} (from DB)`);
+    // Обновляем кэш актуальными данными из Supabase (async для производительности)
+    updateClientInApiKeys(apiKey).catch(error => {
+      console.error('❌ Failed to update cache for', apiKey, error);
+    });
+
+    console.log(`💬 SnapTalk loaded: ${client.client_name} → ${domain} (from DB, cache updating...)`);
     
     return res.type('application/javascript')
       .header('Access-Control-Allow-Origin', '*')

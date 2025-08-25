@@ -35,6 +35,73 @@ export const apiKeys = new Map([
 ]);
 
 // ===== Загрузка активных клиентов в apiKeys при старте сервера =====
+// ===== Функция для обновления конкретного клиента в кэше =====
+export async function updateClientInApiKeys(apiKey) {
+  try {
+    console.log(`🔄 Updating client ${apiKey} in apiKeys cache...`);
+    
+    const { data: client, error } = await supabaseDB
+      .from('clients')
+      .select('*')
+      .eq('api_key', apiKey)
+      .eq('integration_status', 'active')
+      .single();
+
+    if (error || !client) {
+      console.log(`❌ Client ${apiKey} not found or inactive, removing from cache`);
+      apiKeys.delete(apiKey);
+      return false;
+    }
+
+    const formattedClient = ClientsService.formatClientResponse(client);
+    
+    // Создаем обновленную конфигурацию
+    const customConfig = {
+      ...chatVisualConfig,
+      position: {
+        ...chatVisualConfig.position,
+        bottom: formattedClient.widgetPosition?.includes('bottom') ? '1.5rem' : 'auto',
+        top: formattedClient.widgetPosition?.includes('top') ? '1.5rem' : 'auto',
+        right: formattedClient.widgetPosition?.includes('right') ? '1.5rem' : 'auto',
+        left: formattedClient.widgetPosition?.includes('left') ? '1.5rem' : 'auto'
+      },
+      minimizedButton: {
+        ...chatVisualConfig.minimizedButton,
+        backgroundColor: formattedClient.widgetColor || '#70B347',
+        hoverBackgroundColor: darkenColor(formattedClient.widgetColor || '#70B347', 20)
+      },
+      texts: {
+        ...chatVisualConfig.texts,
+        [formattedClient.language || 'ru']: {
+          ...chatVisualConfig.texts[formattedClient.language || 'ru'],
+          managerName: formattedClient.widgetTitle || formattedClient.clientName || 'Поддержка'
+        }
+      }
+    };
+
+    // Обновляем кэш
+    const existingData = apiKeys.get(apiKey);
+    const domain = existingData?.domain || '*';
+    
+    apiKeys.set(apiKey, {
+      clientName: formattedClient.clientName,
+      domain,
+      config: customConfig,
+      language: formattedClient.language || 'ru',
+      created: formattedClient.createdAt,
+      snapTalkClientId: formattedClient.id,
+      managerAvatarUrl: formattedClient.managerAvatarUrl
+    });
+
+    console.log(`✅ Updated client ${formattedClient.clientName} in apiKeys cache`);
+    return true;
+    
+  } catch (error) {
+    console.error(`❌ Error updating client ${apiKey} in cache:`, error);
+    return false;
+  }
+}
+
 export async function loadActiveClientsToApiKeys() {
   try {
     console.log('🔄 Loading active clients into apiKeys...');

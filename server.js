@@ -19,7 +19,7 @@ import {
 } from './src/config/env.js';
 import snapTalkRoutes from './src/routes/snapTalkClients.js';
 import widgetRoutes from './src/routes/widgets.js';
-import { apiKeys, loadActiveClientsToApiKeys } from './src/routes/snapTalkClients.js';
+import { apiKeys, loadActiveClientsToApiKeys, updateClientInApiKeys } from './src/routes/snapTalkClients.js';
 import { supabaseDB } from './src/config/supabase.js';
 
 const app = express();
@@ -154,15 +154,44 @@ app.use('/api', widgetRoutes);
 app.get('/api/admin/reload-clients', async (req, res) => {
   try {
     await loadActiveClientsToApiKeys();
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Active clients reloaded',
-      apiKeysCount: apiKeys.size 
+      apiKeysCount: apiKeys.size
     });
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/admin/sync-client/:apiKey', async (req, res) => {
+  try {
+    const { apiKey } = req.params;
+    
+    if (!apiKey) {
+      return res.status(400).json({
+        success: false,
+        error: 'API key required'
+      });
+    }
+
+    const updated = await updateClientInApiKeys(apiKey);
+    
+    res.json({
+      success: true,
+      updated,
+      message: updated 
+        ? `Client ${apiKey} cache updated successfully`
+        : `Client ${apiKey} not found or inactive`,
+      apiKeysCount: apiKeys.size
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });
