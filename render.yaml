@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: sunray-livechat-new
+    name: snaptalk-server
     env: node
     plan: free
     region: frankfurt

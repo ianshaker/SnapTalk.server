@@ -46,7 +46,7 @@ const sb = (SUPABASE_URL && SUPABASE_SERVICE_ROLE)
 
 // ===== Доп. утилиты / тестовые руты =====
 app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
-app.get('/', (_req, res) => res.type('text/plain').send('sunray-livechat-new OK'));
+app.get('/', (_req, res) => res.type('text/plain').send('SnapTalk Server OK'));
 app.get('/favicon.ico', (_req, res) => res.sendStatus(204));
 
 // ===== Хранилище связок clientId <-> topicId =====
