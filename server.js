@@ -115,8 +115,8 @@ async function ensureTopic(clientId, client) {
     throw new Error(`Telegram settings not configured for client ${client?.client_name || clientId}`);
   }
 
-  const title = \`Client #\${clientId} (\${client?.client_name || 'Unknown'})\`;
-  const url = \`https://api.telegram.org/bot\${botToken}/createForumTopic\`;
+  const title = `Client #${clientId} (${client?.client_name || 'Unknown'})`;
+  const url = `https://api.telegram.org/bot${botToken}/createForumTopic`;
   const { data } = await axios.post(url, {
     chat_id: groupId,
     name: title
@@ -125,7 +125,7 @@ async function ensureTopic(clientId, client) {
   topicId = data.result.message_thread_id;
 
   await dbSaveTopic(clientId, topicId);
-  console.log(\`✅ Created topic \${topicId} for client \${client?.client_name || clientId}\`);
+  console.log(`✅ Created topic ${topicId} for client ${client?.client_name || clientId}`);
   return topicId;
 }
 
@@ -136,8 +136,8 @@ async function sendToTopic({ clientId, text, prefix = '', client }) {
   const botToken = client?.telegram_bot_token || BOT_TOKEN;
   const groupId = client?.telegram_group_id || SUPERGROUP_ID;
 
-  const url = \`https://api.telegram.org/bot\${botToken}/sendMessage\`;
-  const msg = \`\${prefix}\${text}\`.slice(0, 4096);
+  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  const msg = `${prefix}${text}`.slice(0, 4096);
   const payload = {
     chat_id: groupId,
     message_thread_id: topicId,
@@ -146,10 +146,10 @@ async function sendToTopic({ clientId, text, prefix = '', client }) {
     disable_web_page_preview: true
   };
   
-  console.log(\`📤 Sending to Telegram: bot=\${botToken.slice(0,10)}..., group=\${groupId}, topic=\${topicId}\`);
+  console.log(`📤 Sending to Telegram: bot=${botToken.slice(0,10)}..., group=${groupId}, topic=${topicId}`);
   const { data } = await axios.post(url, payload);
   if (!data?.ok) throw new Error('sendMessage failed: ' + JSON.stringify(data));
-  console.log(\`✅ Message sent to Telegram topic \${topicId}\`);
+  console.log(`✅ Message sent to Telegram topic ${topicId}`);
   return data.result;
 }
 
