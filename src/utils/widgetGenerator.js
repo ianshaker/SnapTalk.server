@@ -666,13 +666,16 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
         </div>
       \`;
       
-      // Через 2 секунды показываем текст
+      // Через 2.5 секунды показываем текст сразу целиком
       setTimeout(() => {
-        this.typeText(textEl, WIDGET_TEXTS.greeting || 'Здравствуйте! Меня зовут Сергей. Я готов вас проконсультировать. Какие у вас вопросы?', () => {
-          // Показываем кнопку "Ответить"
+        const text = WIDGET_TEXTS.greeting || 'Здравствуйте! Меня зовут Сергей. Я готов вас проконсультировать. Какие у вас вопросы?';
+        textEl.innerHTML = text; // Показываем текст сразу весь
+        
+        // Показываем кнопку "Ответить" с небольшой задержкой
+        setTimeout(() => {
           replyBtn.classList.remove('snaptalk-hidden');
-        });
-      }, 2000);
+        }, 500);
+      }, 2500);
     }
     
     typeText(element, text, callback) {
