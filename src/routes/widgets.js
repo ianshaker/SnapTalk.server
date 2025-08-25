@@ -38,8 +38,11 @@ router.get('/widget.js', async (req, res) => {
       // Получаем тексты для языка
       const texts = keyData.config.texts[keyData.language] || keyData.config.texts.ru;
 
-      // Генерируем JavaScript код виджета
-      const widgetJS = generateWidgetJS(clientId, keyData.config, texts, req.protocol + '://' + req.get('host'));
+      // Генерируем JavaScript код виджета - принудительно HTTPS для Render.com
+      const serverUrl = req.get('host').includes('onrender.com') 
+        ? 'https://' + req.get('host')
+        : req.protocol + '://' + req.get('host');
+      const widgetJS = generateWidgetJS(clientId, keyData.config, texts, serverUrl);
 
       console.log(`💬 SnapTalk loaded: ${keyData.clientName} → ${domain}`);
       return res.type('application/javascript')

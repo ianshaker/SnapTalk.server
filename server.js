@@ -148,7 +148,7 @@ app.get('/api/admin/debug-clients', async (req, res) => {
     
     const { data: allClients, error } = await supabaseDB
       .from('clients')
-      .select('id, client_name, api_key, integration_status')
+      .select('id, client_name, api_key, integration_status, telegram_bot_token, telegram_group_id')
       .order('created_at', { ascending: false })
       .limit(10);
 

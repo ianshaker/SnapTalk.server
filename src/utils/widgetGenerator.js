@@ -694,7 +694,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
     
     connectWebSocket() {
       try {
-        const wsUrl = SERVER_URL.replace('http', 'ws') + '/ws?clientId=' + CLIENT_ID;
+        const wsUrl = SERVER_URL.replace('https://', 'wss://').replace('http://', 'ws://') + '/ws?clientId=' + CLIENT_ID;
         console.log('🔗 Подключаемся к WebSocket:', wsUrl);
         
         this.ws = new WebSocket(wsUrl);
