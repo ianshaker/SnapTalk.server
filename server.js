@@ -147,19 +147,31 @@ app.post('/api/chat/send', async (req, res) => {
 app.post(`/telegram/webhook/${WEBHOOK_SECRET}`, async (req, res) => {
   try {
     const update = req.body;
+    console.log('🔔 Webhook received:', JSON.stringify(update, null, 2));
 
     const msg = update?.message;
     const text = msg?.text;
     const topicId = msg?.message_thread_id;
     const chatId = msg?.chat?.id;
 
+    console.log('📝 Parsed data:', { text, topicId, chatId, SUPERGROUP_ID });
+
     // Интересуют только сообщения в топиках нашей супергруппы
     if (!text || !topicId || chatId !== SUPERGROUP_ID) {
+      console.log('❌ Message filtered out:', { 
+        hasText: !!text, 
+        hasTopicId: !!topicId, 
+        chatMatches: chatId === SUPERGROUP_ID 
+      });
       return res.sendStatus(200);
     }
 
     // Ищем clientId по topicId
     let clientId = null;
+    console.log('🔍 Looking for clientId by topicId:', topicId);
+    console.log('📊 Supabase available:', !!sb);
+    console.log('🗃️ MemoryMap contents:', Array.from(memoryMap.entries()));
+    
     if (sb) {
       const { data, error } = await sb
         .from('client_topics')
@@ -167,25 +179,40 @@ app.post(`/telegram/webhook/${WEBHOOK_SECRET}`, async (req, res) => {
         .eq('topic_id', topicId)
         .maybeSingle();
       if (!error) clientId = data?.client_id || null;
+      console.log('🗄️ Supabase lookup result:', { data, error, clientId });
     } else {
       for (const [cid, tid] of memoryMap.entries()) {
         if (tid === topicId) { clientId = cid; break; }
       }
+      console.log('💾 Memory lookup result:', clientId);
     }
 
-    if (!clientId) return res.sendStatus(200);
+    if (!clientId) {
+      console.log('❌ ClientId not found for topicId:', topicId);
+      return res.sendStatus(200);
+    }
+    
+    console.log('✅ Found clientId:', clientId);
 
     // 1) Supabase Broadcast (если подключён)
     if (sb) {
-      await sb.channel(`client:${clientId}`).send({
-        type: 'broadcast',
-        event: 'manager_message',
-        payload: { from: 'manager', text, ts: Date.now() }
-      });
+      try {
+        await sb.channel(`client:${clientId}`).send({
+          type: 'broadcast',
+          event: 'manager_message',
+          payload: { from: 'manager', text, ts: Date.now() }
+        });
+        console.log('📡 Supabase broadcast sent for client:', clientId);
+      } catch (broadcastError) {
+        console.error('❌ Supabase broadcast error:', broadcastError);
+      }
     }
 
     // 2) WebSocket push (всегда, если есть активные подписчики)
-    pushToClient(clientId, { from: 'manager', text, ts: Date.now() });
+    console.log('📤 Sending WebSocket message to client:', clientId);
+    const payload = { from: 'manager', text, ts: Date.now() };
+    pushToClient(clientId, payload);
+    console.log('✅ WebSocket message sent:', payload);
 
     return res.sendStatus(200);
   } catch (e) {
@@ -224,14 +251,34 @@ wss.on('connection', (ws, req) => {
 
 function pushToClient(clientId, payload) {
   const set = hub.get(clientId);
-  if (!set || !set.size) return;
+  console.log('🎯 pushToClient called:', { clientId, hasClients: !!set, clientCount: set?.size || 0 });
+  
+  if (!set || !set.size) {
+    console.log('❌ No WebSocket clients for clientId:', clientId);
+    return;
+  }
+  
   const data = JSON.stringify(payload);
+  console.log('📨 Sending to', set.size, 'WebSocket clients:', data);
+  
   for (const ws of set) {
-    try { ws.send(data); } catch {}
+    try { 
+      ws.send(data); 
+      console.log('✅ Message sent to WebSocket client');
+    } catch (error) {
+      console.error('❌ Failed to send to WebSocket client:', error);
+    }
   }
 }
 
 // Старт
 server.listen(PORT, () => {
-  console.log('Server listening on', PORT);
+  console.log('🚀 SnapTalk Server listening on port', PORT);
+  console.log('🔧 Environment check:');
+  console.log('  - BOT_TOKEN:', BOT_TOKEN ? 'SET' : 'NOT SET');
+  console.log('  - SUPERGROUP_ID:', SUPERGROUP_ID || 'NOT SET');
+  console.log('  - WEBHOOK_SECRET:', WEBHOOK_SECRET || 'NOT SET');
+  console.log('  - SUPABASE_URL:', SUPABASE_URL ? 'SET' : 'NOT SET');
+  console.log('  - SUPABASE_SERVICE_ROLE:', SUPABASE_SERVICE_ROLE ? 'SET' : 'NOT SET');
+  console.log('📡 Webhook URL: /telegram/webhook/' + WEBHOOK_SECRET);
 });
