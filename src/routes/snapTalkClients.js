@@ -74,7 +74,8 @@ export async function updateClientInApiKeys(apiKey) {
         ...chatVisualConfig.texts,
         [formattedClient.language || 'ru']: {
           ...chatVisualConfig.texts[formattedClient.language || 'ru'],
-          managerName: formattedClient.widgetTitle || formattedClient.clientName || 'Поддержка'
+          managerName: formattedClient.widgetTitle || formattedClient.clientName || 'Поддержка',
+          greeting: formattedClient.greetingMessage || chatVisualConfig.texts[formattedClient.language || 'ru']?.greeting || 'Здравствуйте! Как дела? Чем могу помочь?'
         }
       }
     };
@@ -143,7 +144,8 @@ export async function loadActiveClientsToApiKeys() {
           ...chatVisualConfig.texts,
           [client.language || 'ru']: {
             ...chatVisualConfig.texts[client.language || 'ru'],
-            managerName: client.widgetTitle || 'Поддержка'
+            managerName: client.widgetTitle || 'Поддержка',
+            greeting: client.greetingMessage || chatVisualConfig.texts[client.language || 'ru']?.greeting || 'Здравствуйте! Как дела? Чем могу помочь?'
           }
         }
       };
@@ -226,7 +228,8 @@ router.post('/clients/create', verifySupabaseToken, async (req, res) => {
         ...chatVisualConfig.texts,
         [clientData.language || 'ru']: {
           ...chatVisualConfig.texts[clientData.language || 'ru'],
-          managerName: clientData.widgetTitle || 'Поддержка'
+          managerName: clientData.widgetTitle || 'Поддержка',
+          greeting: clientData.greetingMessage || newClient.greetingMessage || chatVisualConfig.texts[clientData.language || 'ru']?.greeting || 'Здравствуйте! Как дела? Чем могу помочь?'
         }
       }
     };
@@ -470,7 +473,8 @@ router.put('/clients/:id/activate', verifySupabaseToken, async (req, res) => {
           ...chatVisualConfig.texts,
           [updatedClient.language || 'ru']: {
             ...chatVisualConfig.texts[updatedClient.language || 'ru'],
-            managerName: updatedClient.widgetTitle || 'Поддержка'
+            managerName: updatedClient.widgetTitle || 'Поддержка',
+            greeting: updatedClient.greetingMessage || chatVisualConfig.texts[updatedClient.language || 'ru']?.greeting || 'Здравствуйте! Как дела? Чем могу помочь?'
           }
         }
       };

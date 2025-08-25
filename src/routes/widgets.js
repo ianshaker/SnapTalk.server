@@ -56,7 +56,7 @@ router.get('/widget.js', async (req, res) => {
       },
       texts: {
         ru: {
-          greeting: 'Здравствуйте! Меня зовут Сергей. Я готов вас проконсультировать. Какие у вас вопросы?',
+          greeting: client.greeting_message || 'Здравствуйте! Как дела? Чем могу помочь?',
           reply: 'Ответить', 
           managerName: client.widget_title || client.client_name || 'Поддержка',
           managerStatus: 'Онлайн'

@@ -126,7 +126,7 @@ export function generateWidgetClass() {
       
       // Через 2.5 секунды показываем текст сразу целиком
       setTimeout(() => {
-        const text = WIDGET_TEXTS.greeting || 'Здравствуйте! Меня зовут Сергей. Я готов вас проконсультировать. Какие у вас вопросы?';
+        const text = WIDGET_TEXTS.greeting || 'Здравствуйте! Как дела? Чем могу помочь?';
         textEl.innerHTML = text; // Показываем текст сразу весь
         
         // Показываем кнопку "Ответить" с небольшой задержкой

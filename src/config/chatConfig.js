@@ -306,21 +306,21 @@ export const chatVisualConfig = {
   // Тексты (локализация)
   texts: {
     ru: {
-      greeting: "Здравствуйте, меня зовут Сергей. Я готов вас проконсультировать. Какие у вас вопросы?",
+      greeting: "Здравствуйте! Как дела? Чем могу помочь?", // fallback greeting
       reply: "Ответить",
       placeholder: "Введите ваше сообщение...",
       send: "Отправить",
       back: "Назад",
-      managerName: "Сергей",
+      managerName: "Поддержка",
       managerStatus: "Онлайн"
     },
     en: {
-      greeting: "Hello, my name is Sergey. I'm ready to consult with you. What questions do you have?",
+      greeting: "Hello! How are you? How can I help?", // fallback greeting
       reply: "Reply",
       placeholder: "Type your message...",
       send: "Send", 
       back: "Back",
-      managerName: "Sergey",
+      managerName: "Support",
       managerStatus: "Online"
     }
   }
