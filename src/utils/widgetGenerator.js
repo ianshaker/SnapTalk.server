@@ -5,11 +5,11 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
   const position = config.position || {};
   
   return `
-// SnapTalk Widget v2.0 - Generated for client: ${clientId}
+// SnapTalk Widget v2.1 - Modern Design
 (function() {
   'use strict';
   
-  console.log('🚀 SnapTalk Widget v2.0 загружен для: ${clientId}');
+  console.log('🚀 SnapTalk Widget v2.1 загружен для: ${clientId}');
   
   // Проверяем, что виджет еще не загружен
   if (window.SnapTalkWidget) return;
@@ -25,7 +25,6 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
     constructor() {
       this.isOpen = false;
       this.isGreeting = true;
-      this.isTyping = false;
       this.messages = [];
       
       this.init();
@@ -35,162 +34,228 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
       this.loadStyles();
       this.createWidget();
       
-      // Показываем приветствие через 3 секунды с анимацией печатания
+      // Показываем приветствие через 3 секунды
       setTimeout(() => this.showGreetingWithTyping(), 3000);
     }
     
     loadStyles() {
       const style = document.createElement('style');
       style.textContent = \`
-        /* SnapTalk Widget Styles */
+        /* CSS Variables для цветов */
+        :root {
+          --snaptalk-primary: ${widgetColor};
+          --snaptalk-primary-hover: ${hoverColor};
+          --snaptalk-bg: #ffffff;
+          --snaptalk-text: #1f2937;
+          --snaptalk-text-muted: #6b7280;
+          --snaptalk-border: #e5e7eb;
+          --snaptalk-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+          --snaptalk-shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Основной контейнер виджета */
         .snaptalk-widget { 
           position: fixed; 
           bottom: ${position.bottom || '1.5rem'}; 
           right: ${position.right || '1.5rem'}; 
-          z-index: ${position.zIndex || 50}; 
-          font-family: system-ui, -apple-system, sans-serif;
+          z-index: ${position.zIndex || 9999}; 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          max-width: 380px;
+          will-change: transform;
         }
         
         /* Минимизированная кнопка */
         .snaptalk-btn { 
-          width: 3.5rem; 
-          height: 3.5rem; 
+          width: 60px; 
+          height: 60px; 
           border-radius: 50%; 
-          background: \${WIDGET_COLOR}; 
+          background: linear-gradient(135deg, var(--snaptalk-primary) 0%, var(--snaptalk-primary-hover) 100%);
           color: white; 
           border: none; 
           cursor: pointer; 
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+          box-shadow: var(--snaptalk-shadow);
           display: flex; 
           align-items: center; 
           justify-content: center;
-          transition: all 0.2s ease;
-          animation: snaptalk-scale-in 0.3s ease-out;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          animation: snaptalk-bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+          backdrop-filter: blur(10px);
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .snaptalk-btn::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+          border-radius: 50%;
+          opacity: 0;
+          transition: opacity 0.3s ease;
         }
         
         .snaptalk-btn:hover { 
-          background: \${HOVER_COLOR}; 
-          transform: scale(1.05);
+          transform: scale(1.1) translateY(-2px);
+          box-shadow: var(--snaptalk-shadow-lg);
+        }
+        
+        .snaptalk-btn:hover::before {
+          opacity: 1;
+        }
+        
+        .snaptalk-btn:active {
+          transform: scale(1.05) translateY(-1px);
         }
         
         /* Контейнер приветствия */
         .snaptalk-greeting {
           position: relative;
-          max-width: 20rem;
           margin-bottom: 1rem;
-          animation: snaptalk-scale-fade-in 0.4s ease-out;
+          animation: snaptalk-slide-up 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+          max-width: 320px;
         }
         
         /* Кнопка закрытия */
         .snaptalk-close-btn {
           position: absolute;
-          top: -0.5rem;
-          right: -0.5rem;
-          width: 1.5rem;
-          height: 1.5rem;
+          top: -8px;
+          right: -8px;
+          width: 24px;
+          height: 24px;
           border-radius: 50%;
-          background: white;
-          border: 1px solid #e5e7eb;
+          background: var(--snaptalk-bg);
+          border: 2px solid var(--snaptalk-border);
           cursor: pointer;
-          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
           z-index: 10;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
+          color: var(--snaptalk-text-muted);
         }
         
         .snaptalk-close-btn:hover {
-          background: #f3f4f6;
+          background: #f9fafb;
+          transform: scale(1.1);
+          color: var(--snaptalk-text);
         }
         
         /* Контейнер сообщения */
         .snaptalk-greeting-container {
           display: flex;
-          align-items: end;
-          gap: 0.75rem;
+          align-items: flex-end;
+          gap: 12px;
         }
         
         /* Аватар */
         .snaptalk-avatar {
-          width: 1.5rem;
-          height: 1.5rem;
+          width: 36px;
+          height: 36px;
           border-radius: 50%;
-          background: linear-gradient(135deg, \${WIDGET_COLOR} 0%, \${HOVER_COLOR} 100%);
+          background: linear-gradient(135deg, var(--snaptalk-primary) 0%, var(--snaptalk-primary-hover) 100%);
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
           color: white;
-          font-size: 0.75rem;
+          font-size: 16px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          border: 3px solid var(--snaptalk-bg);
         }
         
         /* Пузырь сообщения */
         .snaptalk-message-bubble {
           position: relative;
-          max-width: 18rem;
-          border-radius: 1rem;
-          padding: 0.75rem;
-          background: white;
-          border: 1px solid #e5e7eb;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-          background: linear-gradient(135deg, white 0%, #f9fafb 100%);
+          max-width: 280px;
+          border-radius: 18px;
+          padding: 16px 20px;
+          background: var(--snaptalk-bg);
+          border: 1px solid var(--snaptalk-border);
+          box-shadow: var(--snaptalk-shadow);
+          background: linear-gradient(135deg, var(--snaptalk-bg) 0%, #f8fafc 100%);
+          backdrop-filter: blur(10px);
         }
         
         /* Хвостик сообщения */
         .snaptalk-message-tail {
           position: absolute;
-          bottom: 0;
-          right: 2rem;
-          width: 0.75rem;
-          height: 0.75rem;
-          background: white;
-          border: 1px solid #e5e7eb;
+          bottom: 12px;
+          left: -6px;
+          width: 12px;
+          height: 12px;
+          background: var(--snaptalk-bg);
+          border: 1px solid var(--snaptalk-border);
           border-top: none;
-          border-left: none;
-          transform: translateY(50%) rotate(45deg);
+          border-right: none;
+          transform: rotate(45deg);
         }
         
         /* Текст сообщения */
         .snaptalk-message-text {
-          font-size: 0.75rem;
-          line-height: 1.25;
-          color: #374151;
-          margin: 0;
+          font-size: 14px;
+          line-height: 1.5;
+          color: var(--snaptalk-text);
+          margin: 0 0 12px 0;
+          font-weight: 400;
         }
         
         /* Кнопка "Ответить" */
         .snaptalk-reply-btn {
-          background: \${WIDGET_COLOR};
+          background: linear-gradient(135deg, var(--snaptalk-primary) 0%, var(--snaptalk-primary-hover) 100%);
           color: white;
           border: none;
-          padding: 0.5rem 0.75rem;
-          border-radius: 0.375rem;
-          font-size: 0.75rem;
+          padding: 10px 20px;
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 500;
           cursor: pointer;
-          margin-top: 0.5rem;
-          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-          transition: all 0.2s ease;
-          animation: snaptalk-fade-in 0.3s ease-out 0.5s both;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          animation: snaptalk-fade-in-up 0.4s ease 0.5s both;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .snaptalk-reply-btn::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+          transition: left 0.5s ease;
         }
         
         .snaptalk-reply-btn:hover {
-          background: \${HOVER_COLOR};
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .snaptalk-reply-btn:hover::before {
+          left: 100%;
+        }
+        
+        .snaptalk-reply-btn:active {
+          transform: translateY(0) scale(0.98);
         }
         
         /* Анимация печатания */
         .snaptalk-typing {
-          display: inline-block;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
         }
         
         .snaptalk-typing-dot {
-          display: inline-block;
-          width: 4px;
-          height: 4px;
+          width: 6px;
+          height: 6px;
           border-radius: 50%;
-          background: #9ca3af;
-          margin: 0 1px;
+          background: var(--snaptalk-text-muted);
           animation: snaptalk-typing 1.4s infinite ease-in-out;
         }
         
@@ -199,31 +264,77 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
         .snaptalk-typing-dot:nth-child(3) { animation-delay: 0s; }
         
         /* Анимации */
-        @keyframes snaptalk-scale-in {
-          0% { transform: scale(0); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
+        @keyframes snaptalk-bounce-in {
+          0% { 
+            transform: scale(0) rotate(45deg);
+            opacity: 0;
+          }
+          50% { 
+            transform: scale(1.2) rotate(22.5deg);
+          }
+          100% { 
+            transform: scale(1) rotate(0deg);
+            opacity: 1;
+          }
         }
         
-        @keyframes snaptalk-scale-fade-in {
-          0% { transform: scale(0.8); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
+        @keyframes snaptalk-slide-up {
+          0% { 
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+          }
+          100% { 
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
         }
         
-        @keyframes snaptalk-fade-in {
-          0% { opacity: 0; transform: translateY(10px); }
-          100% { opacity: 1; transform: translateY(0); }
+        @keyframes snaptalk-fade-in-up {
+          0% { 
+            opacity: 0; 
+            transform: translateY(10px) scale(0.95);
+          }
+          100% { 
+            opacity: 1; 
+            transform: translateY(0) scale(1);
+          }
         }
         
         @keyframes snaptalk-typing {
-          0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-          40% { transform: scale(1); opacity: 1; }
+          0%, 80%, 100% { 
+            transform: scale(0.8); 
+            opacity: 0.4; 
+          }
+          40% { 
+            transform: scale(1.2); 
+            opacity: 1; 
+          }
         }
         
         /* Скрытие элементов */
-        .snaptalk-hidden { display: none !important; }
+        .snaptalk-hidden { 
+          display: none !important; 
+        }
         
         /* Иконки */
-        .snaptalk-icon { width: 1em; height: 1em; fill: currentColor; }
+        .snaptalk-icon { 
+          width: 1.2em; 
+          height: 1.2em; 
+          fill: currentColor; 
+        }
+        
+        /* Респонсивность */
+        @media (max-width: 480px) {
+          .snaptalk-widget {
+            bottom: 1rem;
+            right: 1rem;
+            max-width: calc(100vw - 2rem);
+          }
+          
+          .snaptalk-message-bubble {
+            max-width: calc(100vw - 80px);
+          }
+        }
       \`;
       document.head.appendChild(style);
     }
@@ -233,28 +344,28 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
       this.container.className = 'snaptalk-widget';
       this.container.innerHTML = \`
         <!-- Минимизированная кнопка -->
-        <button class="snaptalk-btn" id="snaptalk-toggle">
-          <svg class="snaptalk-icon" viewBox="0 0 24 24">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <button class="snaptalk-btn" id="snaptalk-toggle" aria-label="Открыть чат">
+          <svg class="snaptalk-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
           </svg>
         </button>
         
         <!-- Приветственное сообщение -->
         <div class="snaptalk-greeting snaptalk-hidden" id="snaptalk-greeting">
-          <button class="snaptalk-close-btn" id="snaptalk-close-greeting">
-            <svg class="snaptalk-icon" viewBox="0 0 24 24" style="width: 12px; height: 12px;">
+          <button class="snaptalk-close-btn" id="snaptalk-close-greeting" aria-label="Закрыть">
+            <svg class="snaptalk-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
           
           <div class="snaptalk-greeting-container">
-            <div class="snaptalk-avatar">💬</div>
+            <div class="snaptalk-avatar">👋</div>
             <div class="snaptalk-message-bubble">
               <div class="snaptalk-message-tail"></div>
               <p class="snaptalk-message-text" id="snaptalk-greeting-text"></p>
               <button class="snaptalk-reply-btn snaptalk-hidden" id="snaptalk-reply">
-                \${WIDGET_TEXTS.reply || 'Ответить'}
+                ✨ \${WIDGET_TEXTS.reply || 'Ответить'}
               </button>
             </div>
           </div>
@@ -292,7 +403,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
       
       // Через 2 секунды показываем текст
       setTimeout(() => {
-        this.typeText(textEl, WIDGET_TEXTS.greeting || 'Здравствуйте! Я готов вас проконсультировать. Какие у вас вопросы?', () => {
+        this.typeText(textEl, WIDGET_TEXTS.greeting || 'Здравствуйте! Меня зовут Сергей. Я готов вас проконсультировать. Какие у вас вопросы?', () => {
           // Показываем кнопку "Ответить"
           replyBtn.classList.remove('snaptalk-hidden');
         });
@@ -300,14 +411,14 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
     }
     
     typeText(element, text, callback) {
-      element.innerHTML = '';
+      element.innerHTML = ''; // Очищаем полностью (убираем точки)
       let i = 0;
       
       const typeChar = () => {
         if (i < text.length) {
           element.innerHTML += text.charAt(i);
           i++;
-          setTimeout(typeChar, 30); // Скорость печатания
+          setTimeout(typeChar, 40); // Чуть медленнее для читаемости
         } else if (callback) {
           callback();
         }
@@ -317,7 +428,12 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
     }
     
     hideGreeting() {
-      document.getElementById('snaptalk-greeting').classList.add('snaptalk-hidden');
+      const greetingEl = document.getElementById('snaptalk-greeting');
+      greetingEl.style.animation = 'snaptalk-slide-up 0.3s ease reverse';
+      setTimeout(() => {
+        greetingEl.classList.add('snaptalk-hidden');
+        greetingEl.style.animation = '';
+      }, 300);
     }
     
     toggleWidget() {
@@ -333,7 +449,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
       this.hideGreeting();
       
       // TODO: Открыть полноценный чат
-      alert('Чат откроется! Клиент: ' + (WIDGET_TEXTS.managerName || 'Поддержка'));
+      alert('🚀 Чат откроется! Консультант: ' + (WIDGET_TEXTS.managerName || 'Поддержка'));
       console.log('💬 Чат открыт для клиента:', CLIENT_ID);
     }
     
