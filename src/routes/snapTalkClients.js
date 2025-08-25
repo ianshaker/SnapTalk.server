@@ -5,6 +5,23 @@ import { ClientsService, supabaseDB } from '../config/supabase.js';
 
 const router = express.Router();
 
+// Функция для затемнения цвета
+function darkenColor(color, percent) {
+  // Проверяем формат HEX
+  const hex = color.replace('#', '');
+  if (hex.length !== 6) return color;
+  
+  const num = parseInt(hex, 16);
+  const amt = Math.round(2.55 * percent);
+  const R = (num >> 16) - amt;
+  const G = (num >> 8 & 0x00FF) - amt;
+  const B = (num & 0x0000FF) - amt;
+  
+  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+    (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+}
+
 // ===== API ключи для виджетов =====
 export const apiKeys = new Map([
   // Демонстрационный ключ
@@ -50,10 +67,11 @@ export async function loadActiveClientsToApiKeys() {
           right: client.widgetPosition?.includes('right') ? '1.5rem' : 'auto',
           left: client.widgetPosition?.includes('left') ? '1.5rem' : 'auto'
         },
-        minimizedButton: {
-          ...chatVisualConfig.minimizedButton,
-          backgroundColor: client.widgetColor || '#70B347'
-        },
+              minimizedButton: {
+        ...chatVisualConfig.minimizedButton,
+        backgroundColor: client.widgetColor || '#70B347',
+        hoverBackgroundColor: darkenColor(client.widgetColor || '#70B347', 20)
+      },
         texts: {
           ...chatVisualConfig.texts,
           [client.language || 'ru']: {
@@ -132,7 +150,8 @@ router.post('/clients/create', verifySupabaseToken, async (req, res) => {
       },
       minimizedButton: {
         ...chatVisualConfig.minimizedButton,
-        backgroundColor: clientData.widgetColor || '#70B347'
+        backgroundColor: clientData.widgetColor || '#70B347',
+        hoverBackgroundColor: darkenColor(clientData.widgetColor || '#70B347', 20)
       },
       texts: {
         ...chatVisualConfig.texts,
