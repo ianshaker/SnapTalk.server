@@ -1,5 +1,9 @@
 // ===== Генератор JavaScript кода виджета =====
 export function generateWidgetJS(clientId, config, texts, serverUrl) {
+  const widgetColor = config.minimizedButton?.backgroundColor || '#70B347';
+  const hoverColor = config.minimizedButton?.hoverBackgroundColor || '#5a9834';
+  const position = config.position || {};
+  
   return `
 // SnapTalk Widget v2.0 - Generated for client: ${clientId}
 (function() {
@@ -10,11 +14,12 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
   // Проверяем, что виджет еще не загружен
   if (window.SnapTalkWidget) return;
   
-  // Конфигурация из бэкенда
-  const WIDGET_CONFIG = ${JSON.stringify(config, null, 2)};
+  // Конфигурация
   const WIDGET_TEXTS = ${JSON.stringify(texts, null, 2)};
   const CLIENT_ID = '${clientId}';
   const SERVER_URL = '${serverUrl}';
+  const WIDGET_COLOR = '${widgetColor}';
+  const HOVER_COLOR = '${hoverColor}';
   
   class SnapTalkWidget {
     constructor() {
@@ -22,8 +27,6 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
       this.isGreeting = true;
       this.isTyping = false;
       this.messages = [];
-      this.ws = null;
-      this.connected = false;
       
       this.init();
     }
@@ -31,7 +34,6 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
     init() {
       this.loadStyles();
       this.createWidget();
-      this.connectWebSocket();
       
       // Показываем приветствие через 3 секунды с анимацией печатания
       setTimeout(() => this.showGreetingWithTyping(), 3000);
@@ -43,35 +45,22 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
         /* SnapTalk Widget Styles */
         .snaptalk-widget { 
           position: fixed; 
-          bottom: \${WIDGET_CONFIG.position?.bottom || '1.5rem'}; 
-          right: \${WIDGET_CONFIG.position?.right || '1.5rem'}; 
-          z-index: \${WIDGET_CONFIG.position?.zIndex || 50}; 
+          bottom: ${position.bottom || '1.5rem'}; 
+          right: ${position.right || '1.5rem'}; 
+          z-index: ${position.zIndex || 50}; 
           font-family: system-ui, -apple-system, sans-serif;
-          
-          /* CSS Variables для цветов */
-          --primary: 220 70% 50%;
-          --primary-foreground: 0 0% 98%;
-          --primary-hover: 220 70% 45%;
-          --card: 0 0% 100%;
-          --border: 220 13% 91%;
-          --foreground: 224 71% 4%;
-          --muted-foreground: 215 16% 47%;
-          --accent: 210 40% 94%;
-          --accent-foreground: 222 47% 11%;
-          --secondary: 210 40% 94%;
-          --muted: 210 40% 96%;
         }
         
         /* Минимизированная кнопка */
         .snaptalk-btn { 
-          width: \${WIDGET_CONFIG.minimizedButton?.width || '3.5rem'}; 
-          height: \${WIDGET_CONFIG.minimizedButton?.height || '3.5rem'}; 
-          border-radius: \${WIDGET_CONFIG.minimizedButton?.borderRadius || '50%'}; 
-          background: \${WIDGET_CONFIG.minimizedButton?.backgroundColor || '#70B347'}; 
-          color: \${WIDGET_CONFIG.minimizedButton?.color || 'white'}; 
+          width: 3.5rem; 
+          height: 3.5rem; 
+          border-radius: 50%; 
+          background: \${WIDGET_COLOR}; 
+          color: white; 
           border: none; 
           cursor: pointer; 
-          box-shadow: \${WIDGET_CONFIG.minimizedButton?.boxShadow || '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}; 
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
           display: flex; 
           align-items: center; 
           justify-content: center;
@@ -80,14 +69,14 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
         }
         
         .snaptalk-btn:hover { 
-          background: \${WIDGET_CONFIG.minimizedButton?.hoverBackgroundColor || '#5a9834'}; 
+          background: \${HOVER_COLOR}; 
           transform: scale(1.05);
         }
         
         /* Контейнер приветствия */
         .snaptalk-greeting {
           position: relative;
-          max-width: \${WIDGET_CONFIG.widget?.maxWidth || '20rem'};
+          max-width: 20rem;
           margin-bottom: 1rem;
           animation: snaptalk-scale-fade-in 0.4s ease-out;
         }
@@ -127,7 +116,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
           width: 1.5rem;
           height: 1.5rem;
           border-radius: 50%;
-          background: linear-gradient(135deg, \${WIDGET_CONFIG.minimizedButton?.backgroundColor || '#70B347'} 0%, #5a9834 100%);
+          background: linear-gradient(135deg, \${WIDGET_COLOR} 0%, \${HOVER_COLOR} 100%);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -172,7 +161,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
         
         /* Кнопка "Ответить" */
         .snaptalk-reply-btn {
-          background: \${WIDGET_CONFIG.minimizedButton?.backgroundColor || '#70B347'};
+          background: \${WIDGET_COLOR};
           color: white;
           border: none;
           padding: 0.5rem 0.75rem;
@@ -186,7 +175,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
         }
         
         .snaptalk-reply-btn:hover {
-          background: \${WIDGET_CONFIG.minimizedButton?.hoverBackgroundColor || '#5a9834'};
+          background: \${HOVER_COLOR};
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         
@@ -282,11 +271,6 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
       document.getElementById('snaptalk-reply').addEventListener('click', () => this.openChat());
     }
     
-    connectWebSocket() {
-      // TODO: Реализовать WebSocket подключение
-      console.log('WebSocket connection will be implemented');
-    }
-    
     async showGreetingWithTyping() {
       if (this.isOpen) return;
       
@@ -349,7 +333,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl) {
       this.hideGreeting();
       
       // TODO: Открыть полноценный чат
-      alert('Чат откроется! Клиент: \${WIDGET_TEXTS.managerName || 'Поддержка'}');
+      alert('Чат откроется! Клиент: ' + (WIDGET_TEXTS.managerName || 'Поддержка'));
       console.log('💬 Чат открыт для клиента:', CLIENT_ID);
     }
     
