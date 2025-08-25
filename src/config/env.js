@@ -6,9 +6,9 @@ export const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 export const SUPERGROUP_ID = process.env.TELEGRAM_SUPERGROUP_ID && Number(process.env.TELEGRAM_SUPERGROUP_ID);
 export const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || 'dev-secret';
 
-export const SUPABASE_URL = process.env.SUPABASE_URL;
+export const SUPABASE_URL = process.env.SUPABASE_URL || 'https://mdzsswlwebxrxprxrnam.supabase.co';
 export const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE;
-export const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+export const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kenNzd2x3ZWJ4cnhwcnhybmFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxMjIzNjAsImV4cCI6MjA3MTY5ODM2MH0.6y-WjM4MukQ8adqDOC0MR37iV2MuYinHKbnrN5YFuuw';
 
 // CORS настройки
 export const allowedOrigins = [
