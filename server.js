@@ -10,6 +10,7 @@ import {
   SUPERGROUP_ID, 
   WEBHOOK_SECRET, 
   allowedOrigins,
+  lovableSandboxRegex,
   sb,
   sbAuth,
   SUPABASE_URL,
@@ -25,8 +26,19 @@ const app = express();
 // CORS: разрешаем SnapTalk фронтенд и *.lovable.app
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // health, Postman, Telegram webhook
-    if (allowedOrigins.includes(origin) || /\.lovable\.app$/i.test(origin)) return cb(null, true);
+    // Разрешаем запросы без origin (health checks, Postman, Telegram webhook)
+    if (!origin) return cb(null, true);
+    
+    // Проверяем точные совпадения
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    
+    // Проверяем общие домены lovable.app
+    if (/\.lovable\.app$/i.test(origin)) return cb(null, true);
+    
+    // Проверяем Lovable sandbox домены
+    if (lovableSandboxRegex.test(origin)) return cb(null, true);
+    
+    console.log('❌ CORS rejected origin:', origin);
     return cb(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

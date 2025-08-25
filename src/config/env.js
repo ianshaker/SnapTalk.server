@@ -14,8 +14,13 @@ export const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 export const allowedOrigins = [
   'https://savov.lovable.app',
   'https://snaptalk.lovable.app',
-  'http://localhost:5173' // для разработки
+  'http://localhost:5173', // для разработки
+  // Lovable sandbox домены
+  'https://61b20835-88ce-4d70-ae0d-161637c5d5b4.sandbox.lovable.dev'
 ];
+
+// Регекс для всех Lovable sandbox доменов
+export const lovableSandboxRegex = /^https:\/\/[a-z0-9-]+\.sandbox\.lovable\.dev$/;
 
 // Supabase clients
 export const sb = (SUPABASE_URL && SUPABASE_SERVICE_ROLE)
