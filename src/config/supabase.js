@@ -1,8 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE } from './env.js';
 
 // Supabase конфигурация для операций с БД
-const supabaseUrl = 'https://mdzsswlwebxrxprxrnam.supabase.co';
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kenNzd2x3ZWJ4cnhwcnhybmFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxMjIzNjAsImV4cCI6MjA3MTY5ODM2MH0.6y-WjM4MukQ8adqDOC0MR37iV2MuYinHKbnrN5YFuuw';
+const supabaseUrl = SUPABASE_URL;
+const supabaseServiceKey = SUPABASE_SERVICE_ROLE || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kenNzd2x3ZWJ4cnhwcnhybmFtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjEyMjM2MCwiZXhwIjoyMDcxNjk4MzYwfQ.example_service_role_key';
+
+console.log('🔧 Supabase config:', { 
+  url: supabaseUrl, 
+  hasServiceKey: !!supabaseServiceKey,
+  keyPrefix: supabaseServiceKey?.substring(0, 20) + '...'
+});
 
 // Клиент для операций с таблицей clients
 export const supabaseDB = createClient(supabaseUrl, supabaseServiceKey);
