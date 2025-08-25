@@ -164,6 +164,90 @@ app.get('/api/admin/debug-clients', async (req, res) => {
   }
 });
 
+// Временный debug endpoint для widget.js
+app.get('/api/widget.js', async (req, res) => {
+  try {
+    const { key } = req.query;
+
+    if (!key) {
+      return res.status(400)
+        .type('application/javascript')
+        .send('console.error("SnapTalk Widget: API key required");');
+    }
+
+    console.log(`🔍 Widget request for key: ${key}`);
+
+    // Проверяем клиента в Supabase напрямую
+    const { data: client, error } = await supabaseDB
+      .from('clients')
+      .select('*')
+      .eq('api_key', key)
+      .eq('integration_status', 'active')
+      .single();
+
+    if (error || !client) {
+      console.log(`❌ Client not found or inactive for key: ${key}`);
+      return res.status(404)
+        .type('application/javascript')
+        .send('console.error("SnapTalk Widget: Invalid or inactive API key");');
+    }
+
+    console.log(`✅ Found active client: ${client.client_name}`);
+
+    // Простой тестовый виджет
+    const widgetCode = `
+// SnapTalk Widget for ${client.client_name}
+console.log("SnapTalk Widget загружен для клиента: ${client.client_name}");
+
+(function() {
+  // Создаем простой тестовый виджет
+  const widget = document.createElement('div');
+  widget.id = 'snaptalk-widget';
+  widget.style.cssText = \`
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background: ${client.widget_color || '#70B347'};
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 9999;
+    font-family: Arial, sans-serif;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  \`;
+  widget.innerHTML = '💬';
+  widget.title = '${client.widget_title || 'Чат поддержки'}';
+
+  // Обработчик клика
+  widget.onclick = function() {
+    alert('SnapTalk чат для клиента "${client.client_name}" активирован!\\nAPI Key: ${key}');
+  };
+
+  // Добавляем виджет на страницу
+  document.body.appendChild(widget);
+  
+  console.log('✅ SnapTalk Widget создан и добавлен на страницу');
+})();
+`;
+
+    res.type('application/javascript')
+      .header('Access-Control-Allow-Origin', '*')
+      .send(widgetCode);
+
+  } catch (error) {
+    console.error('Widget error:', error);
+    res.status(500)
+      .type('application/javascript')
+      .send('console.error("SnapTalk Widget: Server error");');
+  }
+});
+
 // ===== Основные руты =====
 app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 app.get('/favicon.ico', (_req, res) => res.sendStatus(204));
