@@ -2,6 +2,7 @@ import express from 'express';
 import { generateWidgetJS } from '../utils/widgetGenerator.js';
 import { apiKeys, updateClientInApiKeys } from './snapTalkClients.js';
 import { supabaseDB } from '../config/supabase.js';
+import { createWidgetColorConfig } from '../utils/colorUtils.js';
 
 const router = express.Router();
 
@@ -51,8 +52,7 @@ router.get('/widget.js', async (req, res) => {
     const supabaseConfig = {
       position: { bottom: '1.5rem', right: '1.5rem', zIndex: 9999 },
       minimizedButton: {
-        backgroundColor: client.widget_color || '#70B347',
-        hoverBackgroundColor: '#5a9834'
+        ...createWidgetColorConfig(client.widget_color, client.widget_color_secondary)
       },
       texts: {
         ru: {

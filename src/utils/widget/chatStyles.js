@@ -20,7 +20,7 @@ export function generateChatStyles() {
     
     /* Заголовок чата */
     .snaptalk-chat-header {
-      background: linear-gradient(135deg, var(--snaptalk-primary) 0%, var(--snaptalk-primary-hover) 100%);
+      background: var(--snaptalk-gradient);
       color: white;
       padding: 16px 20px;
       display: flex;

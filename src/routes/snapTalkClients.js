@@ -2,25 +2,11 @@ import express from 'express';
 import { verifySupabaseToken } from '../middleware/auth.js';
 import { chatVisualConfig } from '../config/chatConfig.js';
 import { ClientsService, supabaseDB } from '../config/supabase.js';
+import { createWidgetColorConfig, darkenColor } from '../utils/colorUtils.js';
 
 const router = express.Router();
 
-// Функция для затемнения цвета
-function darkenColor(color, percent) {
-  // Проверяем формат HEX
-  const hex = color.replace('#', '');
-  if (hex.length !== 6) return color;
-  
-  const num = parseInt(hex, 16);
-  const amt = Math.round(2.55 * percent);
-  const R = (num >> 16) - amt;
-  const G = (num >> 8 & 0x00FF) - amt;
-  const B = (num & 0x0000FF) - amt;
-  
-  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
-    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
-    (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
-}
+// Цветовые утилиты теперь импортируются из ../utils/colorUtils.js
 
 // ===== API ключи для виджетов =====
 export const apiKeys = new Map([
@@ -67,8 +53,7 @@ export async function updateClientInApiKeys(apiKey) {
       },
       minimizedButton: {
         ...chatVisualConfig.minimizedButton,
-        backgroundColor: formattedClient.widgetColor || '#70B347',
-        hoverBackgroundColor: darkenColor(formattedClient.widgetColor || '#70B347', 20)
+        ...createWidgetColorConfig(formattedClient.widgetColor, formattedClient.widgetColorSecondary)
       },
       texts: {
         ...chatVisualConfig.texts,
@@ -137,8 +122,7 @@ export async function loadActiveClientsToApiKeys() {
         },
               minimizedButton: {
         ...chatVisualConfig.minimizedButton,
-        backgroundColor: client.widgetColor || '#70B347',
-        hoverBackgroundColor: darkenColor(client.widgetColor || '#70B347', 20)
+        ...createWidgetColorConfig(client.widgetColor, client.widgetColorSecondary)
       },
         texts: {
           ...chatVisualConfig.texts,
@@ -221,8 +205,7 @@ router.post('/clients/create', verifySupabaseToken, async (req, res) => {
       },
       minimizedButton: {
         ...chatVisualConfig.minimizedButton,
-        backgroundColor: clientData.widgetColor || '#70B347',
-        hoverBackgroundColor: darkenColor(clientData.widgetColor || '#70B347', 20)
+        ...createWidgetColorConfig(clientData.widgetColor, clientData.widgetColorSecondary)
       },
       texts: {
         ...chatVisualConfig.texts,
@@ -370,7 +353,7 @@ router.put('/clients/:id', verifySupabaseToken, async (req, res) => {
           },
           minimizedButton: {
             ...apiKeyData.config.minimizedButton,
-            backgroundColor: updatedClient.widgetColor
+            ...createWidgetColorConfig(updatedClient.widgetColor, updatedClient.widgetColorSecondary)
           }
         };
         
@@ -467,7 +450,7 @@ router.put('/clients/:id/activate', verifySupabaseToken, async (req, res) => {
         },
         minimizedButton: {
           ...chatVisualConfig.minimizedButton,
-          backgroundColor: updatedClient.widgetColor || '#70B347'
+          ...createWidgetColorConfig(updatedClient.widgetColor, updatedClient.widgetColorSecondary)
         },
         texts: {
           ...chatVisualConfig.texts,

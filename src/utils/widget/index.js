@@ -4,14 +4,18 @@ import { generateWidgetStyles } from './styles.js';
 import { generateChatStyles } from './chatStyles.js';
 import { generateCompleteHTML } from './templates.js';
 import { generateWidgetClass } from './SnapTalkWidget.js';
+import { createWidgetColorConfig } from '../colorUtils.js';
 
 export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = '', managerAvatarUrl = '') {
-  const widgetColor = config.minimizedButton?.backgroundColor || '#70B347';
-  const hoverColor = config.minimizedButton?.hoverBackgroundColor || '#5a9834';
+  const primaryColor = config.minimizedButton?.primary || config.minimizedButton?.backgroundColor || '#70B347';
+  const secondaryColor = config.minimizedButton?.secondary || config.minimizedButton?.widgetColorSecondary || '#A3D977';
   const position = config.position || {};
   
+  // Создаем конфигурацию цветов
+  const colorConfig = createWidgetColorConfig(primaryColor, secondaryColor);
+  
   // Объединяем стили
-  const combinedStyles = generateWidgetStyles(widgetColor, hoverColor, position) + generateChatStyles();
+  const combinedStyles = generateWidgetStyles(colorConfig, position) + generateChatStyles();
   
   // Получаем HTML шаблон
   const widgetHTML = generateCompleteHTML(texts);
@@ -34,8 +38,7 @@ export function generateWidgetJS(clientId, config, texts, serverUrl, apiKey = ''
   const CLIENT_ID = '${clientId}';
   const API_KEY = '${apiKey}';
   const SERVER_URL = '${serverUrl}';
-  const WIDGET_COLOR = '${widgetColor}';
-  const HOVER_COLOR = '${hoverColor}';
+  const COLOR_CONFIG = ${JSON.stringify(colorConfig, null, 2)};
   const MANAGER_AVATAR_URL = '${managerAvatarUrl}';
   
   // ===== СТИЛИ =====

@@ -1,13 +1,16 @@
 // ===== CSS Стили для виджета SnapTalk =====
 
-export function generateWidgetStyles(widgetColor, hoverColor, position) {
+export function generateWidgetStyles(colorConfig, position) {
   return `
     /* ===== SNAPTALK WIDGET STYLES ===== */
     
     /* CSS Variables для цветов */
     :root {
-      --snaptalk-primary: ${widgetColor};
-      --snaptalk-primary-hover: ${hoverColor};
+      --snaptalk-primary: ${colorConfig.primary};
+      --snaptalk-secondary: ${colorConfig.secondary};
+      --snaptalk-gradient: ${colorConfig.gradient};
+      --snaptalk-hover-gradient: ${colorConfig.hoverGradient};
+      --snaptalk-primary-hover: ${colorConfig.darkened};
       --snaptalk-bg: #ffffff;
       --snaptalk-text: #1f2937;
       --snaptalk-text-muted: #6b7280;
@@ -32,7 +35,7 @@ export function generateWidgetStyles(widgetColor, hoverColor, position) {
       width: 60px; 
       height: 60px; 
       border-radius: 50%; 
-      background: linear-gradient(135deg, var(--snaptalk-primary) 0%, var(--snaptalk-primary-hover) 100%); 
+      background: var(--snaptalk-gradient); 
       border: none; 
       color: white; 
       font-size: 24px; 
@@ -46,6 +49,7 @@ export function generateWidgetStyles(widgetColor, hoverColor, position) {
     }
     
     .snaptalk-btn:hover { 
+      background: var(--snaptalk-hover-gradient);
       transform: scale(1.1) translateY(-2px); 
       box-shadow: var(--snaptalk-shadow-lg); 
     }
@@ -172,7 +176,7 @@ export function generateWidgetStyles(widgetColor, hoverColor, position) {
     
     /* Кнопка "Ответить" */
     .snaptalk-reply-btn {
-      background: linear-gradient(135deg, var(--snaptalk-primary) 0%, var(--snaptalk-primary-hover) 100%);
+      background: var(--snaptalk-gradient);
       color: white;
       border: none;
       padding: 10px 20px;
@@ -199,6 +203,7 @@ export function generateWidgetStyles(widgetColor, hoverColor, position) {
     }
     
     .snaptalk-reply-btn:hover {
+      background: var(--snaptalk-hover-gradient);
       transform: translateY(-2px) scale(1.02);
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     }

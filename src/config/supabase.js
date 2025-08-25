@@ -141,6 +141,7 @@ export class ClientsService {
       language: dbClient.language,
       widgetPosition: dbClient.widget_position,
       widgetColor: dbClient.widget_color,
+      widgetColorSecondary: dbClient.widget_color_secondary,
       widgetTitle: dbClient.widget_title,
       timezone: dbClient.timezone,
       telegramBotToken: dbClient.telegram_bot_token,
