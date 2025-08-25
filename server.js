@@ -115,6 +115,32 @@ async function sendToTopic({ clientId, text, prefix = '' }) {
 app.use('/api/snaptalk', snapTalkRoutes);
 app.use('/api', widgetRoutes);
 
+// ===== Административные эндпоинты =====
+app.get('/api/admin/reload-clients', async (req, res) => {
+  try {
+    await loadActiveClientsToApiKeys();
+    res.json({ 
+      success: true, 
+      message: 'Active clients reloaded',
+      apiKeysCount: apiKeys.size 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+app.get('/api/admin/api-keys', (req, res) => {
+  const keys = Array.from(apiKeys.keys());
+  res.json({ 
+    success: true, 
+    apiKeys: keys,
+    total: keys.length 
+  });
+});
+
 // ===== Основные руты =====
 app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 app.get('/favicon.ico', (_req, res) => res.sendStatus(204));
