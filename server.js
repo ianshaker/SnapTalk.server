@@ -152,10 +152,41 @@ async function dbSaveTopic(clientId, topicId, visitorId = null, requestId = null
     } : null
   };
   
-  const { error } = await sb
-    .from('client_topics')
-    .upsert(topicData, { onConflict: 'client_id' });
-  if (error) console.error('dbSaveTopic error', error);
+  // 🔄 ИСПРАВЛЕНИЕ: используем visitor_id для уникальности записей!
+  try {
+    if (visitorId) {
+      // Для посетителей с visitor_id - сначала проверяем существование
+      const existing = await sb
+        .from('client_topics')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('visitor_id', visitorId)
+        .maybeSingle();
+      
+      if (existing.data) {
+        // Обновляем существующую запись
+        const { error } = await sb
+          .from('client_topics')
+          .update(topicData)
+          .eq('id', existing.data.id);
+        if (error) console.error('❌ dbSaveTopic update error:', error);
+      } else {
+        // Создаем новую запись
+        const { error } = await sb
+          .from('client_topics')
+          .insert(topicData);
+        if (error) console.error('❌ dbSaveTopic insert error:', error);
+      }
+    } else {
+      // Для старых записей без visitor_id - upsert по client_id (обратная совместимость)
+      const { error } = await sb
+        .from('client_topics')
+        .upsert(topicData, { onConflict: 'client_id' });
+      if (error) console.error('❌ dbSaveTopic upsert error:', error);
+    }
+  } catch (error) {
+    console.error('❌ dbSaveTopic error:', error);
+  }
 }
 
 // ===== Telegram helpers =====
@@ -446,8 +477,7 @@ app.post('/api/visit/track', async (req, res) => {
       return res.json({ ok: true, message: 'Visit already tracked recently' });
     }
 
-    // Сохраняем визит в базу данных
-    await saveVisitToDatabase(clientId, visitorId, requestId, url, meta);
+    // ✅ Данные будут сохранены в client_topics через ensureTopicForVisitor → dbSaveTopic
 
     // Создаем/находим топик и отправляем уведомление в Telegram  
     const topicResult = await ensureTopicForVisitor(clientId, client, visitorId, requestId, url, meta);
@@ -598,53 +628,40 @@ wss.on('connection', (ws, req) => {
 });
 
 // ===== Вспомогательные функции для трекинга визитов =====
+// 🔄 Проверка недавних визитов через client_topics (НЕ site_visits!)
 async function checkRecentVisit(clientId, visitorId, url) {
-  if (!sb) return false; // В memory mode не проверяем дубли
+  if (!sb || !visitorId) return false; // В memory mode не проверяем дубли
   
   const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   
-  const { data, error } = await sb
-    .from('site_visits')
-    .select('id')
-    .eq('client_id', clientId)
-    .eq('visitor_id', visitorId)
-    .eq('page_url', url)
-    .gte('visited_at', thirtyMinutesAgo)
-    .maybeSingle();
+  try {
+    const { data, error } = await sb
+      .from('client_topics')
+      .select('updated_at, page_url')
+      .eq('client_id', clientId)
+      .eq('visitor_id', visitorId)
+      .gte('updated_at', thirtyMinutesAgo)
+      .maybeSingle();
+      
+    if (error) {
+      console.error('❌ checkRecentVisit error:', error);
+      return false;
+    }
     
-  if (error && !error.message.includes('does not exist')) {
-    console.error('checkRecentVisit error:', error);
+    // Если есть недавнее обновление темы для этого посетителя
+    const hasRecentActivity = !!data;
+    if (hasRecentActivity) {
+      console.log(`⏰ Recent activity found for visitor ${visitorId.slice(0,8)}... (within 30 min)`);
+    }
+    
+    return hasRecentActivity;
+  } catch (error) {
+    console.error('❌ checkRecentVisit error:', error);
+    return false;
   }
-  
-  return !!data;
 }
 
-async function saveVisitToDatabase(clientId, visitorId, requestId, url, meta) {
-  if (!sb) return; // В memory mode не сохраняем
-  
-  const visitData = {
-    client_id: clientId,
-    visitor_id: visitorId,
-    request_id: requestId,
-    page_url: url,
-    page_title: meta?.title || '',
-    referrer: meta?.ref || '',
-    user_agent: meta?.userAgent || '',
-    utm_source: meta?.utm?.source || null,
-    utm_medium: meta?.utm?.medium || null,
-    utm_campaign: meta?.utm?.campaign || null,
-    visited_at: new Date().toISOString(),
-    meta_data: meta || {}
-  };
-  
-  const { error } = await sb
-    .from('site_visits')
-    .insert(visitData);
-    
-  if (error) {
-    console.error('saveVisitToDatabase error:', error);
-  }
-}
+// ❌ УДАЛЕНА: saveVisitToDatabase - данные сохраняются в client_topics через dbSaveTopic
 
 function formatVisitMessage(client, visitorId, url, meta) {
   const domain = new URL(url).hostname;
