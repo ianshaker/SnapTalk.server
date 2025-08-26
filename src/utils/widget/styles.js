@@ -124,29 +124,16 @@ export function generateWidgetStyles(colorConfig, position) {
       padding: 0 4px;
     }
     
-    /* Контейнер для сообщения и кнопки в одной строке */
+    /* Контейнер для сообщения */
     .snaptalk-message-content {
-      display: flex;
-      align-items: flex-end;
-      gap: 12px;
       flex: 1;
       min-width: 0;
       transition: all var(--snaptalk-transition-normal);
     }
     
-    /* Когда кнопка ответить скрыта - контейнер ближе к краю */
-    .snaptalk-message-content:has(.snaptalk-reply-btn.snaptalk-hidden) {
-      margin-right: 8px;
-    }
-    
     /* Специальный класс для широкого пузыря когда кнопка скрыта */
-    .snaptalk-message-content.snaptalk-wide-bubble {
-      margin-right: 12px;
-    }
-    
     .snaptalk-message-content.snaptalk-wide-bubble .snaptalk-message-bubble {
       max-width: 480px;
-      flex: 1;
     }
     
     /* Аватар - стиль Apple */
@@ -187,12 +174,12 @@ export function generateWidgetStyles(colorConfig, position) {
       z-index: 1;
     }
     
-    /* Пузырь сообщения - Apple Glassmorphism с увеличенной шириной */
+    /* Пузырь сообщения - Apple Glassmorphism с кнопкой внутри */
     .snaptalk-message-bubble {
       position: relative;
       max-width: 420px;
       border-radius: 18px 18px 18px 4px;
-      padding: 14px 18px 16px 18px;
+      padding: 14px 18px;
       background: rgba(255, 255, 255, 0.15);
       border: 1px solid rgba(255, 255, 255, 0.2);
       box-shadow: var(--snaptalk-shadow-message);
@@ -203,10 +190,9 @@ export function generateWidgetStyles(colorConfig, position) {
       flex: 1;
     }
     
-    /* Когда кнопка "Ответить" скрыта - пузырь может быть еще шире */
-    .snaptalk-reply-btn.snaptalk-hidden + .snaptalk-message-bubble,
-    .snaptalk-message-content:has(.snaptalk-reply-btn.snaptalk-hidden) .snaptalk-message-bubble {
-      max-width: 450px;
+    /* Когда кнопка внутри пузыря, добавляем padding снизу для неё */
+    .snaptalk-message-bubble:has(.snaptalk-reply-btn:not(.snaptalk-hidden)) {
+      padding-bottom: 44px;
     }
     
     /* Хвостик сообщения - стиль Telegram */
@@ -234,53 +220,47 @@ export function generateWidgetStyles(colorConfig, position) {
       font-weight: 400;
     }
     
-    /* Кнопка "Ответить" - компактная, рядом с сообщением */
+    /* Кнопка "Ответить" - в правом нижнем углу пузыря */
     .snaptalk-reply-btn {
-      background: var(--snaptalk-gradient);
-      color: white;
+      position: absolute;
+      bottom: 8px;
+      right: 12px;
+      background: transparent;
+      color: var(--snaptalk-primary);
       border: none;
-      padding: 10px 18px;
-      border-radius: var(--snaptalk-radius-lg);
-      font-size: 14px;
-      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: var(--snaptalk-radius-sm);
+      font-size: 13px;
+      font-weight: 700;
       cursor: pointer;
-      box-shadow: var(--snaptalk-shadow-button);
       transition: all var(--snaptalk-transition-normal);
       animation: snaptalk-elegant-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.3s both;
-      position: relative;
-      overflow: hidden;
-      backdrop-filter: blur(10px);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
       letter-spacing: 0.02em;
       white-space: nowrap;
-      flex-shrink: 0;
-      min-width: auto;
-      height: fit-content;
-      align-self: flex-end;
+      z-index: 2;
     }
     
-    .snaptalk-reply-btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-      transition: left 0.5s ease;
+    .snaptalk-reply-btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+    
+    .snaptalk-reply-btn span {
+      font-weight: 700;
     }
     
     .snaptalk-reply-btn:hover {
-      background: var(--snaptalk-hover-gradient);
-      transform: translateY(-3px) scale(1.05);
-      box-shadow: var(--snaptalk-shadow-premium);
-    }
-    
-    .snaptalk-reply-btn:hover::before {
-      left: 100%;
+      background: rgba(var(--snaptalk-primary-rgb), 0.1);
+      transform: scale(1.05);
+      color: var(--snaptalk-primary-hover);
     }
     
     .snaptalk-reply-btn:active {
-      transform: translateY(0) scale(0.98);
+      transform: scale(0.95);
     }
     
     /* Анимация печатания */

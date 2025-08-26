@@ -104,13 +104,9 @@ export function generateWidgetClass() {
       const greetingEl = document.getElementById('snaptalk-greeting');
       const textEl = document.getElementById('snaptalk-greeting-text');
       const replyBtn = document.getElementById('snaptalk-reply');
-      const messageContent = greetingEl.querySelector('.snaptalk-message-content');
       
       // Показываем приветствие
       greetingEl.classList.remove('snaptalk-hidden');
-      
-      // Пока кнопка скрыта - пузырь может быть шире и ближе к краю
-      messageContent.classList.add('snaptalk-wide-bubble');
       
       // Показываем анимацию печатания
       textEl.innerHTML = \`
@@ -133,8 +129,6 @@ export function generateWidgetClass() {
         
         // Показываем кнопку "Ответить" с небольшой задержкой
         setTimeout(() => {
-          // Убираем класс широкого пузыря перед показом кнопки
-          messageContent.classList.remove('snaptalk-wide-bubble');
           replyBtn.classList.remove('snaptalk-hidden');
         }, 500);
       }, 2500);

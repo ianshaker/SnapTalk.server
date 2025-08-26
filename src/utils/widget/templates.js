@@ -17,10 +17,14 @@ export function generateWidgetHTML(texts) {
           <div class="snaptalk-message-bubble">
             <div class="snaptalk-message-tail"></div>
             <p class="snaptalk-message-text" id="snaptalk-greeting-text"></p>
+            <button class="snaptalk-reply-btn snaptalk-hidden" id="snaptalk-reply">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m3 11 18-9v18l-18-9"/>
+                <path d="m11 11 6 6v-12l-6 6"/>
+              </svg>
+              <span>\${WIDGET_TEXTS.reply || 'Ответить'}</span>
+            </button>
           </div>
-          <button class="snaptalk-reply-btn snaptalk-hidden" id="snaptalk-reply">
-            \${WIDGET_TEXTS.reply || 'Ответить'}
-          </button>
         </div>
       </div>
     </div>
