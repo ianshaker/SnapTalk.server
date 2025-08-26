@@ -141,6 +141,47 @@ export function generateWidgetComponents() {
       padding-bottom: 26px;
     }
     
+    /* Мини-аватар внутри пузыря сообщения */
+    .snaptalk-bubble-avatar {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--snaptalk-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border: 1.5px solid rgba(255, 255, 255, 0.8);
+      overflow: hidden;
+      z-index: 3;
+      font-size: 10px;
+      font-weight: 600;
+      color: white;
+      transition: all var(--snaptalk-transition-normal);
+    }
+    
+    .snaptalk-bubble-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    
+    .snaptalk-bubble-avatar-fallback {
+      font-size: 9px;
+      color: white;
+      font-weight: 600;
+    }
+    
+    /* Корректировка padding текста когда есть мини-аватар */
+    .snaptalk-message-bubble:has(.snaptalk-bubble-avatar) .snaptalk-message-text {
+      padding-top: 6px;
+      padding-left: 6px;
+    }
+    
     /* Хвостик сообщения - стиль Telegram */
     .snaptalk-message-tail {
       position: absolute;
