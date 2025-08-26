@@ -146,6 +146,20 @@ export function generateWidgetComponents() {
       font-weight: 600;
     }
     
+    /* Индикатор онлайн-статуса */
+    .snaptalk-online-indicator {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 12px;
+      height: 12px;
+      background: #00C851;
+      border-radius: 50%;
+      border: 2px solid white;
+      animation: snaptalk-pulse-online 2s infinite;
+      z-index: 4;
+    }
+    
     /* Корректировка padding текста когда есть мини-аватар */
     .snaptalk-message-bubble:has(.snaptalk-bubble-avatar) .snaptalk-message-text {
       padding-right: 50px;

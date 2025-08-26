@@ -14,7 +14,9 @@ export function generateWidgetHTML(texts) {
       <div class="snaptalk-greeting-container">
         <div class="snaptalk-message-content">
           <div class="snaptalk-message-bubble">
-            <div class="snaptalk-bubble-avatar" id="snaptalk-bubble-avatar"></div>
+            <div class="snaptalk-bubble-avatar" id="snaptalk-bubble-avatar">
+              <div class="snaptalk-online-indicator"></div>
+            </div>
             <p class="snaptalk-message-text" id="snaptalk-greeting-text"></p>
             <button class="snaptalk-reply-btn snaptalk-hidden" id="snaptalk-reply">
               <span>\${WIDGET_TEXTS.reply || 'Ответить'}</span>

@@ -127,5 +127,20 @@ export function generateWidgetAnimations() {
         transform: scale(1);
       }
     }
+    
+    @keyframes snaptalk-pulse-online {
+      0% { 
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% { 
+        opacity: 0.7;
+        transform: scale(0.9);
+      }
+      100% { 
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
   `;
 }
