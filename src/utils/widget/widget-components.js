@@ -62,11 +62,10 @@ export function generateWidgetComponents() {
       transition: all var(--snaptalk-transition-normal);
     }
     
-    /* Контейнер сообщения - элегантный layout */
+    /* Контейнер сообщения - простой layout без внешнего аватара */
     .snaptalk-greeting-container {
       display: flex;
       align-items: flex-end;
-      gap: 14px;
       padding: 0 4px;
     }
     
@@ -82,43 +81,7 @@ export function generateWidgetComponents() {
       max-width: 480px;
     }
     
-    /* Аватар - стиль Apple */
-    .snaptalk-avatar {
-      width: 42px;
-      height: 42px;
-      border-radius: var(--snaptalk-radius-full);
-      background: var(--snaptalk-gradient);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      color: white;
-      font-size: 18px;
-      font-weight: 600;
-      box-shadow: var(--snaptalk-shadow-button);
-      border: 2px solid rgba(255, 255, 255, 0.9);
-      overflow: hidden;
-      position: relative;
-      transition: all var(--snaptalk-transition-normal);
-    }
-    
-    /* Изображение аватара */
-    .snaptalk-avatar img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 50%;
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-    
-    /* Фолбэк аватар */
-    .snaptalk-avatar-fallback {
-      font-size: 16px;
-      color: white;
-      z-index: 1;
-    }
+
     
     /* Пузырь сообщения - Apple Glassmorphism с кнопкой внутри */
     .snaptalk-message-bubble {
@@ -141,23 +104,23 @@ export function generateWidgetComponents() {
       padding-bottom: 26px;
     }
     
-    /* Мини-аватар внутри пузыря сообщения */
+    /* Мини-аватар внутри пузыря сообщения - правый верхний угол */
     .snaptalk-bubble-avatar {
       position: absolute;
       top: 8px;
-      left: 8px;
-      width: 20px;
-      height: 20px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       background: var(--snaptalk-gradient);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      border: 1.5px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.9);
       overflow: hidden;
       z-index: 3;
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 600;
       color: white;
       transition: all var(--snaptalk-transition-normal);
@@ -171,7 +134,7 @@ export function generateWidgetComponents() {
     }
     
     .snaptalk-bubble-avatar-fallback {
-      font-size: 9px;
+      font-size: 12px;
       color: white;
       font-weight: 600;
     }
@@ -179,7 +142,7 @@ export function generateWidgetComponents() {
     /* Корректировка padding текста когда есть мини-аватар */
     .snaptalk-message-bubble:has(.snaptalk-bubble-avatar) .snaptalk-message-text {
       padding-top: 6px;
-      padding-left: 6px;
+      padding-right: 36px;
     }
     
     /* Хвостик сообщения - стиль Telegram */

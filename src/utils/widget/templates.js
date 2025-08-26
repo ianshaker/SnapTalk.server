@@ -12,7 +12,6 @@ export function generateWidgetHTML(texts) {
     <!-- Приветственное сообщение -->
     <div class="snaptalk-greeting snaptalk-hidden" id="snaptalk-greeting">
       <div class="snaptalk-greeting-container">
-        <div class="snaptalk-avatar" id="snaptalk-avatar"></div>
         <div class="snaptalk-message-content">
           <div class="snaptalk-message-bubble">
             <div class="snaptalk-message-tail"></div>

@@ -37,24 +37,10 @@ export function generateWidgetCore() {
     }
     
     setupAvatar() {
-      const avatarEl = document.getElementById('snaptalk-avatar');
       const chatAvatarEl = document.getElementById('snaptalk-chat-avatar');
       const bubbleAvatarEl = document.getElementById('snaptalk-bubble-avatar');
       
       if (MANAGER_AVATAR_URL && MANAGER_AVATAR_URL.trim()) {
-        // Настройка аватара в приветствии
-        if (avatarEl) {
-          const img = document.createElement('img');
-          img.src = MANAGER_AVATAR_URL;
-          img.alt = WIDGET_TEXTS.managerName || 'Менеджер';
-          
-          img.onerror = () => {
-            avatarEl.innerHTML = '<span class="snaptalk-avatar-fallback">👤</span>';
-          };
-          
-          avatarEl.appendChild(img);
-        }
-        
         // Настройка аватара в чате
         if (chatAvatarEl) {
           const chatImg = document.createElement('img');
@@ -82,9 +68,6 @@ export function generateWidgetCore() {
         }
       } else {
         // Показываем фолбэк эмодзи
-        if (avatarEl) {
-          avatarEl.innerHTML = '<span class="snaptalk-avatar-fallback">👋</span>';
-        }
         if (chatAvatarEl) {
           chatAvatarEl.innerHTML = '👨‍💼';
         }
