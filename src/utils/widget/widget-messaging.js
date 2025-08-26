@@ -28,7 +28,19 @@ export function generateWidgetMessaging() {
       console.log('✅ Чат открыт');
     }
     
-    // Метод closeChat удален - закрытие чата больше не поддерживается
+    closeChat() {
+      this.isOpen = false;
+      
+      // Скрываем чат и показываем кружок
+      document.getElementById('snaptalk-chat').classList.add('snaptalk-hidden');
+      document.getElementById('snaptalk-toggle').classList.remove('snaptalk-hidden');
+      
+      // Показываем приветствие снова
+      const greetingEl = document.getElementById('snaptalk-greeting');
+      greetingEl.classList.remove('snaptalk-hidden');
+      
+      console.log('✅ Чат закрыт');
+    }
     
     addMessage(text, type) {
       const messagesContainer = document.getElementById('snaptalk-messages');

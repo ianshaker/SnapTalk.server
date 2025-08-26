@@ -72,8 +72,7 @@ export function generateWidgetGreeting() {
     
     toggleWidget() {
       if (this.isOpen) {
-        // Закрытие чата больше не поддерживается
-        console.log('❌ Закрытие чата отключено');
+        this.closeChat();
       } else {
         this.openChat();
       }

@@ -92,6 +92,12 @@ export function generateWidgetCore() {
         });
       }
       
+      // Обработчик для кнопки закрытия чата
+      const closeBtn = document.querySelector('.chat-close-btn');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => this.closeChat());
+      }
+      
       document.getElementById('snaptalk-send').addEventListener('click', () => this.sendMessage());
       
       const input = document.getElementById('snaptalk-input');

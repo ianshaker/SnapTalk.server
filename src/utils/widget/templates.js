@@ -41,6 +41,11 @@ export function generateChatHTML(texts) {
           <h3 class="snaptalk-header-name">\${WIDGET_TEXTS.managerName || 'Поддержка'}</h3>
           <p class="snaptalk-header-status" id="snaptalk-status">\${WIDGET_TEXTS.managerStatus || 'Онлайн'}</p>
         </div>
+        <button class="chat-close-btn" aria-label="Закрыть чат">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </div>
       
       <!-- 💬 ЧАСТЬ 2: ПЕРЕПИСКА (Messages Area) -->

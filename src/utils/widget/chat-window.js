@@ -28,10 +28,44 @@ export function generateChatWindow() {
       align-items: center;
       gap: 12px;
       flex-shrink: 0;
+      position: relative;
       box-shadow: 
         0 8px 24px rgba(0, 0, 0, 0.12),
         0 0 0 1px rgba(255, 255, 255, 0.1);
     }
+    
+    /* Кнопка закрытия */
+     .chat-close-btn {
+       position: absolute;
+       top: 12px;
+       right: 16px;
+       width: 32px;
+       height: 32px;
+       background: rgba(255, 255, 255, 0.2);
+       border: none;
+       border-radius: 50%;
+       color: white;
+       cursor: pointer;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       transition: all 0.2s ease;
+       z-index: 10;
+     }
+     
+     .chat-close-btn:hover {
+       background: rgba(255, 255, 255, 0.3);
+       transform: scale(1.1);
+     }
+     
+     .chat-close-btn:active {
+       transform: scale(0.95);
+     }
+     
+     .chat-close-btn svg {
+       width: 16px;
+       height: 16px;
+     }
     
     /* 💬 КАРТОЧКА 2: ПЕРЕПИСКА - Отдельная карточка */
     .snaptalk-messages-area {
