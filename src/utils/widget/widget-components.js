@@ -87,7 +87,7 @@ export function generateWidgetComponents() {
     .snaptalk-message-bubble {
       position: relative;
       max-width: 420px;
-      border-radius: 18px 18px 18px 4px;
+      border-radius: 18px;
       padding: 14px 18px;
       background: rgba(255, 255, 255, 0.15);
       border: 1px solid rgba(255, 255, 255, 0.2);
@@ -109,18 +109,18 @@ export function generateWidgetComponents() {
       position: absolute;
       top: 8px;
       right: 8px;
-      width: 28px;
-      height: 28px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       background: var(--snaptalk-gradient);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-      border: 2px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+      border: 2.5px solid rgba(255, 255, 255, 0.95);
       overflow: hidden;
       z-index: 3;
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 600;
       color: white;
       transition: all var(--snaptalk-transition-normal);
@@ -134,32 +134,18 @@ export function generateWidgetComponents() {
     }
     
     .snaptalk-bubble-avatar-fallback {
-      font-size: 12px;
+      font-size: 14px;
       color: white;
       font-weight: 600;
     }
     
     /* Корректировка padding текста когда есть мини-аватар */
     .snaptalk-message-bubble:has(.snaptalk-bubble-avatar) .snaptalk-message-text {
-      padding-top: 6px;
-      padding-right: 36px;
+      padding-top: 8px;
+      padding-right: 44px;
     }
     
-    /* Хвостик сообщения - стиль Telegram */
-    .snaptalk-message-tail {
-      position: absolute;
-      bottom: 16px;
-      left: -8px;
-      width: 16px;
-      height: 16px;
-      background: linear-gradient(135deg, var(--snaptalk-bg) 0%, #f8fafc 100%);
-      border: 1px solid var(--snaptalk-border);
-      border-top: none;
-      border-right: none;
-      transform: rotate(45deg);
-      box-shadow: -2px 2px 4px rgba(0, 0, 0, 0.08);
-      border-radius: 0 0 0 3px;
-    }
+
     
     /* Текст сообщения */
     .snaptalk-message-text {
