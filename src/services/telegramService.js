@@ -1,0 +1,311 @@
+/**
+ * 📱 TELEGRAM SERVICE
+ * 
+ * Централизованный сервис для работы с Telegram:
+ * - Поиск клиентов и посетителей
+ * - Управление топиками (создание, валидация)
+ * - Умная логика распознавания посетителей
+ * - Отправка сообщений в Telegram
+ * 
+ * Вынесен из server.js для улучшения архитектуры (267 строк → отдельный модуль)
+ */
+
+import axios from 'axios';
+import { BOT_TOKEN, SUPERGROUP_ID, sb } from '../config/env.js';
+
+// ===== Хранилище связок clientId <-> topicId =====
+const memoryMap = new Map(); // clientId -> topicId
+
+// ===== Утилиты для базы данных =====
+export async function findClientByApiKey(apiKey) {
+  if (!sb || !apiKey) return null;
+  try {
+    const { data, error } = await sb
+      .from('clients')
+      .select('*')
+      .eq('api_key', apiKey)
+      .eq('integration_status', 'active')
+      .maybeSingle();
+    
+    if (error) {
+      console.error('❌ Error finding client by API key:', error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('❌ findClientByApiKey error:', error);
+    return null;
+  }
+}
+
+export async function dbGetTopic(clientId) {
+  if (!sb) return memoryMap.get(clientId) || null;
+  const { data, error } = await sb
+    .from('client_topics')
+    .select('topic_id')
+    .eq('client_id', clientId)
+    .maybeSingle();
+  if (error) { console.error('dbGetTopic error', error); return null; }
+  return data?.topic_id ?? null;
+}
+
+// 🆕 Поиск существующего посетителя по visitor_id
+export async function findExistingVisitor(clientId, visitorId) {
+  if (!sb || !visitorId) return null;
+  
+  try {
+    const { data, error } = await sb
+      .from('client_topics')
+      .select('topic_id, visitor_id, created_at, page_url')
+      .eq('client_id', clientId)
+      .eq('visitor_id', visitorId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('❌ findExistingVisitor error:', error);
+      return null;
+    }
+    
+    return data; // { topic_id, visitor_id, created_at, page_url } или null
+  } catch (error) {
+    console.error('❌ findExistingVisitor error:', error);
+    return null;
+  }
+}
+
+// 🆕 Проверка валидности топика в Telegram
+export async function isTopicValidInTelegram(botToken, groupId, topicId) {
+  try {
+    const telegramCheckUrl = `https://api.telegram.org/bot${botToken}/getForumTopicIconStickers`;
+    const { data } = await axios.post(telegramCheckUrl, {
+      chat_id: groupId,
+      message_thread_id: topicId
+    });
+    
+    // Если топик существует, API вернет ok: true
+    return data?.ok === true;
+  } catch (error) {
+    // Если топик не существует или удален - API вернет ошибку
+    console.warn(`⚠️ Topic ${topicId} not valid in Telegram:`, error.response?.data?.description || error.message);
+    return false;
+  }
+}
+
+export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId = null, url = null, meta = null) {
+  if (!sb) { memoryMap.set(clientId, topicId); return; }
+  
+  const topicData = { 
+    client_id: clientId, 
+    topic_id: topicId,
+    visitor_id: visitorId,
+    request_id: requestId,
+    page_url: url, // 🔥 СОХРАНЯЕМ URL!
+    page_title: meta?.title || null,
+    referrer: meta?.ref || null,
+    utm_source: meta?.utm?.source || null,
+    utm_medium: meta?.utm?.medium || null,
+    utm_campaign: meta?.utm?.campaign || null,
+    fingerprint_data: visitorId ? { 
+      visitorId, 
+      requestId, 
+      url,
+      meta,
+      timestamp: new Date().toISOString() 
+    } : null
+  };
+  
+  // 🔄 ИСПРАВЛЕНИЕ: используем visitor_id для уникальности записей!
+  try {
+    if (visitorId) {
+      // Для посетителей с visitor_id - сначала проверяем существование
+      const existing = await sb
+        .from('client_topics')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('visitor_id', visitorId)
+        .maybeSingle();
+      
+      if (existing.data) {
+        // Обновляем существующую запись
+        const { error } = await sb
+          .from('client_topics')
+          .update(topicData)
+          .eq('id', existing.data.id);
+        if (error) console.error('❌ dbSaveTopic update error:', error);
+      } else {
+        // Создаем новую запись
+        const { error } = await sb
+          .from('client_topics')
+          .insert(topicData);
+        if (error) console.error('❌ dbSaveTopic insert error:', error);
+      }
+    } else {
+      // Для старых записей без visitor_id - upsert по client_id (обратная совместимость)
+      const { error } = await sb
+        .from('client_topics')
+        .upsert(topicData, { onConflict: 'client_id' });
+      if (error) console.error('❌ dbSaveTopic upsert error:', error);
+    }
+  } catch (error) {
+    console.error('❌ dbSaveTopic error:', error);
+  }
+}
+
+// ===== Telegram helpers =====
+// 🆕 Умная функция обеспечения топика для посетителя
+export async function ensureTopicForVisitor(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
+  // 1️⃣ Если есть visitorId - ищем существующего посетителя
+  if (visitorId) {
+    console.log(`🔍 Checking for existing visitor: ${visitorId.slice(0,8)}...`);
+    
+    const existingVisitor = await findExistingVisitor(clientId, visitorId);
+    if (existingVisitor) {
+      console.log(`👤 Found existing visitor with topic: ${existingVisitor.topic_id}`);
+      
+      // 2️⃣ Проверяем валидность топика в Telegram
+      const botToken = client?.telegram_bot_token || BOT_TOKEN;
+      const groupId = client?.telegram_group_id || SUPERGROUP_ID;
+      
+      const isValidTopic = await isTopicValidInTelegram(botToken, groupId, existingVisitor.topic_id);
+      if (isValidTopic) {
+        console.log(`✅ Topic ${existingVisitor.topic_id} is valid - reusing for visitor`);
+        
+        // 3️⃣ Обновляем ТОЛЬКО метаданные последнего визита (НЕ создаем новую запись!)
+        try {
+          const { error } = await sb
+            .from('client_topics')
+            .update({
+              page_url: url,
+              page_title: meta?.title || null,
+              referrer: meta?.ref || null,
+              utm_source: meta?.utm?.source || null,
+              utm_medium: meta?.utm?.medium || null,
+              utm_campaign: meta?.utm?.campaign || null,
+              updated_at: new Date().toISOString(),
+              fingerprint_data: visitorId ? { 
+                visitorId, 
+                requestId, 
+                url,
+                meta,
+                timestamp: new Date().toISOString() 
+              } : null
+            })
+            .eq('client_id', clientId)
+            .eq('visitor_id', visitorId);
+          
+          if (error) console.error('❌ Update existing visitor error:', error);
+          else console.log(`🔄 Updated existing visitor metadata: ${visitorId.slice(0,8)}...`);
+        } catch (error) {
+          console.error('❌ Update existing visitor error:', error);
+        }
+        
+        return {
+          topicId: existingVisitor.topic_id,
+          isExistingVisitor: true,
+          previousUrl: existingVisitor.page_url,
+          firstVisit: existingVisitor.created_at
+        };
+      } else {
+        console.log(`❌ Topic ${existingVisitor.topic_id} is invalid - creating new topic`);
+      }
+    }
+  }
+  
+  // 4️⃣ Создаем новый топик (для новых посетителей или если старый топик недействителен)
+  return await createNewTopic(clientId, client, visitorId, requestId, url, meta);
+}
+
+// 🔄 Старая функция ensureTopic - теперь только для обратной совместимости
+export async function ensureTopic(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
+  // Используем новую умную логику
+  const result = await ensureTopicForVisitor(clientId, client, visitorId, requestId, url, meta);
+  return typeof result === 'object' ? result.topicId : result;
+}
+
+// 🆕 Вынесенная логика создания нового топика
+export async function createNewTopic(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
+  console.log(`🆕 Creating new topic for client: ${client?.client_name || clientId}`);
+  
+  let topicId = await dbGetTopic(clientId);
+  if (topicId) return topicId;
+
+  // Используем настройки клиента
+  const botToken = client?.telegram_bot_token || BOT_TOKEN;
+  const groupId = client?.telegram_group_id || SUPERGROUP_ID;
+
+  if (!botToken || !groupId) {
+    throw new Error(`Telegram settings not configured for client ${client?.client_name || clientId}`);
+  }
+
+  const title = visitorId 
+    ? `Visitor ${visitorId.slice(0,8)} - ${client?.client_name || clientId}`
+    : `Client #${clientId} (${client?.client_name || 'Unknown'})`;
+    
+  const telegramUrl = `https://api.telegram.org/bot${botToken}/createForumTopic`;
+  const { data } = await axios.post(telegramUrl, {
+    chat_id: groupId,
+    name: title
+  });
+  if (!data?.ok) throw new Error('createForumTopic failed: ' + JSON.stringify(data));
+  topicId = data.result.message_thread_id;
+
+  await dbSaveTopic(clientId, topicId, visitorId, requestId, url, meta);
+  console.log(`✅ Created topic ${topicId} for client ${client?.client_name || clientId}${visitorId ? ` [Visitor: ${visitorId.slice(0,8)}...]` : ''}`);
+  
+  return {
+    topicId,
+    isExistingVisitor: false
+  };
+}
+
+export async function sendToTopic({ clientId, text, prefix = '', client, visitorId = null, requestId = null, url = null, meta = null }) {
+  const result = await ensureTopicForVisitor(clientId, client, visitorId, requestId, url, meta);
+  const topicId = typeof result === 'object' ? result.topicId : result;
+
+  // Используем настройки клиента
+  const botToken = client?.telegram_bot_token || BOT_TOKEN;
+  const groupId = client?.telegram_group_id || SUPERGROUP_ID;
+
+  const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  const msg = `${prefix}${text}`.slice(0, 4096);
+  const payload = {
+    chat_id: groupId,
+    message_thread_id: topicId,
+    text: msg,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true
+  };
+  
+  console.log(`📤 Sending to Telegram: bot=${botToken.slice(0,10)}..., group=${groupId}, topic=${topicId}`);
+  const { data } = await axios.post(telegramApiUrl, payload);
+  if (!data?.ok) throw new Error('sendMessage failed: ' + JSON.stringify(data));
+  console.log(`✅ Message sent to Telegram topic ${topicId}`);
+  return data.result;
+}
+
+// 🆕 Прямая отправка сообщения в Telegram (без создания топика)
+export async function sendTelegramMessage(topicId, message, prefix, client) {
+  const botToken = client?.telegram_bot_token || BOT_TOKEN;
+  const groupId = client?.telegram_group_id || SUPERGROUP_ID;
+  
+  const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  const fullMessage = `${prefix}${message}`.slice(0, 4096);
+  
+  const payload = {
+    chat_id: groupId,
+    message_thread_id: topicId,
+    text: fullMessage,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true
+  };
+  
+  console.log(`📤 Sending to Telegram topic ${topicId}: ${botToken.slice(0,10)}...`);
+  const { data } = await axios.post(telegramApiUrl, payload);
+  if (!data?.ok) throw new Error('sendMessage failed: ' + JSON.stringify(data));
+  console.log(`✅ Message sent to Telegram topic ${topicId}`);
+  return data.result;
+}
+
+// Экспорт memoryMap для обратной совместимости
+export { memoryMap };
