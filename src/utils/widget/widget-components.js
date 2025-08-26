@@ -109,8 +109,8 @@ export function generateWidgetComponents() {
       position: absolute;
       top: 8px;
       right: 8px;
-      width: 36px;
-      height: 36px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       background: var(--snaptalk-gradient);
       display: flex;
@@ -120,7 +120,7 @@ export function generateWidgetComponents() {
       border: 2.5px solid rgba(255, 255, 255, 0.95);
       overflow: hidden;
       z-index: 3;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 600;
       color: white;
       transition: all var(--snaptalk-transition-normal);
@@ -142,7 +142,7 @@ export function generateWidgetComponents() {
     /* Корректировка padding текста когда есть мини-аватар */
     .snaptalk-message-bubble:has(.snaptalk-bubble-avatar) .snaptalk-message-text {
       padding-top: 8px;
-      padding-right: 44px;
+      padding-right: 50px;
     }
     
 
