@@ -208,7 +208,7 @@ export function generateChatMessages() {
     /* Респонсивность */
     @media (max-width: 480px) {
       .snaptalk-widget {
-        bottom: 1rem;
+        bottom: 0.5rem;
         left: 50%;
         transform: translateX(-50%);
         right: auto;
@@ -216,7 +216,7 @@ export function generateChatMessages() {
       }
       
       .snaptalk-message-bubble {
-        width: calc(100vw - 60px);
+        width: calc(100vw - 40px);
         max-width: none;
       }
       
