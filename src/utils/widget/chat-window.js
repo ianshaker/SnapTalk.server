@@ -110,7 +110,7 @@ export function generateChatWindow() {
       font-size: 12px;
       font-weight: 500;
       color: #059669; /* Зеленый текст */
-      margin: 0 auto 8px auto; /* Центрирование */
+      margin: 8px auto 8px auto; /* Отступ сверху + центрирование */
       text-align: center;
       width: fit-content; /* Только по ширине текста */
     }
