@@ -217,6 +217,16 @@ export function generateChatMessages() {
         max-width: calc(100vw - 20px);
       }
       
+      .snaptalk-message-text {
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      
+      .snaptalk-reply-btn {
+        font-size: 12px;
+        padding: 1px 3px;
+      }
+      
       .snaptalk-chat {
         width: calc(100vw - 1rem);
         height: calc(100vh - 2rem);
