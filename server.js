@@ -105,10 +105,10 @@ app.post('/api/visit/track', async (req, res) => {
     let message, prefix;
     if (isExistingVisitor) {
       message = formatReturnVisitMessage(client, visitorId, url, meta, previousUrl, firstVisit);
-      prefix = `🔄 ПОВТОРНЫЙ ВИЗИТ\n\n`;
+      prefix = '🔄 ПОВТОРНЫЙ ВИЗИТ\n\n';
     } else {
       message = formatVisitMessage(client, visitorId, url, meta);
-      prefix = `👤 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`;
+      prefix = '👤 НОВЫЙ ПОСЕТИТЕЛЬ\n\n';
     }
     
     // Отправляем в уже подготовленный топик
@@ -291,8 +291,7 @@ function formatVisitMessage(client, visitorId, url, meta) {
     second: '2-digit'
   });
 
-  let message = `НОВЫЙ ПОСЕТИТЕЛЬ\n\n`;
-  message += `\`${url}\`\n`;
+  let message = `\`${url}\`\n`;
   message += `Visitor ID: ${visitorId}\n`;
   message += `${meta?.title || ''}\n\n`;
   message += `${timestamp}\n\n`;
@@ -312,8 +311,7 @@ function formatReturnVisitMessage(client, visitorId, url, meta, previousUrl, fir
     second: '2-digit'
   });
 
-  let message = `ВОЗВРАЩЕНИЕ ПОСЕТИТЕЛЯ\n\n`;
-  message += `\`${url}\`\n`;
+  let message = `\`${url}\`\n`;
   message += `Visitor ID: ${visitorId}\n`;
   message += `${meta?.title || ''}\n\n`;
   message += `${timestamp}\n\n`;
