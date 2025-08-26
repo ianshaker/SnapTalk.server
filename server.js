@@ -281,72 +281,40 @@ async function checkRecentVisit(clientId, visitorId, url) {
 // ❌ УДАЛЕНА: saveVisitToDatabase - данные сохраняются в client_topics через dbSaveTopic
 
 function formatVisitMessage(client, visitorId, url, meta) {
-  const domain = new URL(url).hostname;
-  const shortVisitorId = visitorId.slice(0, 8) + '...';
-  
-  let message = `🌐 Страница: ${url}\n`;
-  message += `👤 Visitor ID: ${shortVisitorId}\n`;
-  message += `🏠 Домен: ${domain}\n`;
-  
-  if (meta?.title) {
-    message += `📄 Заголовок: ${meta.title}\n`;
-  }
-  
-  if (meta?.ref) {
-    message += `🔗 Откуда пришел: ${meta.ref}\n`;
-  }
-  
-  if (meta?.utm?.source) {
-    message += `📊 UTM: ${meta.utm.source}`;
-    if (meta.utm.medium) message += ` / ${meta.utm.medium}`;
-    if (meta.utm.campaign) message += ` / ${meta.utm.campaign}`;
-    message += `\n`;
-  }
-  
-  message += `\n⏰ ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}`;
+  const timestamp = new Date().toLocaleString('ru-RU', {
+    timeZone: 'Europe/Moscow',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
+  let message = `${url}\n`;
+  message += `Visitor ID: ${visitorId}\n`;
+  message += `${meta?.title || ''}\n\n`;
+  message += `${timestamp}\n\n`;
   
   return message;
 }
 
 // 🆕 Формат сообщения для повторного визита
 function formatReturnVisitMessage(client, visitorId, url, meta, previousUrl, firstVisit) {
-  const domain = new URL(url).hostname;
-  const shortVisitorId = visitorId.slice(0, 8) + '...';
-  
-  let message = `🌐 Страница: ${url}\n`;
-  message += `👤 Visitor ID: ${shortVisitorId}\n`;
-  message += `🏠 Домен: ${domain}\n`;
-  
-  if (meta?.title) {
-    message += `📄 Заголовок: ${meta.title}\n`;
-  }
-  
-  if (previousUrl) {
-    message += `📋 Предыдущая страница: ${previousUrl}\n`;
-  }
-  
-  if (meta?.ref) {
-    message += `🔗 Откуда пришел: ${meta.ref}\n`;
-  }
-  
-  if (meta?.utm?.source) {
-    message += `📊 UTM: ${meta.utm.source}`;
-    if (meta.utm.medium) message += ` / ${meta.utm.medium}`;
-    if (meta.utm.campaign) message += ` / ${meta.utm.campaign}`;
-    message += `\n`;
-  }
-  
-  const firstVisitTime = firstVisit ? new Date(firstVisit).toLocaleString('ru-RU', { 
+  const timestamp = new Date().toLocaleString('ru-RU', {
     timeZone: 'Europe/Moscow',
-    day: '2-digit', 
-    month: '2-digit', 
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
-    hour: '2-digit', 
-    minute: '2-digit'
-  }) : 'Неизвестно';
-  
-  message += `\n⏰ Сейчас: ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}`;
-  message += `\n🕒 Первый визит: ${firstVisitTime}`;
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
+  let message = `${url}\n`;
+  message += `Visitor ID: ${visitorId}\n`;
+  message += `${meta?.title || ''}\n\n`;
+  message += `${timestamp}\n\n`;
   
   return message;
 }
