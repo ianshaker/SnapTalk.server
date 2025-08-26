@@ -4,58 +4,66 @@ export function generateChatWindow() {
   return `
     /* ===== CHAT WINDOW STRUCTURE ===== */
     
-    /* Чат-окно - 3 отдельные части */
+    /* Чат-окно - Контейнер для 3 отдельных карточек */
     .snaptalk-chat {
       width: 380px;
       height: 520px;
-      border-radius: 24px;
-      box-shadow: 
-        0 25px 45px -12px rgba(0, 0, 0, 0.08),
-        0 0 0 1px rgba(255, 255, 255, 0.05);
-      overflow: hidden;
       animation: snaptalk-smooth-show 0.3s ease-out;
       display: flex;
       flex-direction: column;
       transform-origin: bottom right;
+      gap: 12px; /* Воздух между карточками */
+      padding: 0;
+      background: transparent;
     }
     
-    /* 🔵 ЧАСТЬ 1: ШАПКА - Цвет компании */
+    /* 🔵 КАРТОЧКА 1: ШАПКА - Отдельная карточка */
     .snaptalk-chat-header {
       background: linear-gradient(135deg, var(--snaptalk-primary), var(--snaptalk-primary-hover));
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
-      border-radius: 24px 24px 0 0;
+      border-radius: 20px; /* Полностью скругленная */
       padding: 16px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
       display: flex;
       align-items: center;
       gap: 12px;
       flex-shrink: 0;
+      box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
     }
     
-    /* 💬 ЧАСТЬ 2: ПЕРЕПИСКА - Светлый blur */
+    /* 💬 КАРТОЧКА 2: ПЕРЕПИСКА - Отдельная карточка */
     .snaptalk-messages-area {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
+      border-radius: 20px; /* Полностью скругленная */
       flex: 1;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.08),
+        0 0 0 1px rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
-    /* ⌨️ ЧАСТЬ 3: ПОЛЕ ВВОДА - Темная секция */
+    /* ⌨️ КАРТОЧКА 3: ПОЛЕ ВВОДА - Отдельная карточка */
     .snaptalk-input-area {
-      background: rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      border-radius: 0 0 24px 24px;
+      background: rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 20px; /* Полностью скругленная */
       padding: 16px 20px;
-      border-top: 1px solid rgba(255, 255, 255, 0.2);
       display: flex;
       gap: 12px;
       align-items: flex-end;
       flex-shrink: 0;
+      box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.08),
+        0 0 0 1px rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
     /* Элементы шапки */
@@ -88,36 +96,24 @@ export function generateChatWindow() {
       margin: 0;
     }
     
-    .snaptalk-chat-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.2);
+    /* Элементы области сообщений */
+    .snaptalk-messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      overflow: hidden;
-      position: relative;
+      flex-direction: column;
+      gap: 12px;
     }
     
-    .snaptalk-chat-avatar img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 50%;
-    }
-    
-    .snaptalk-chat-info h3 {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 600;
-    }
-    
-    .snaptalk-chat-info p {
-      margin: 0;
-      font-size: 12px;
-      opacity: 0.8;
+    .snaptalk-connection-status {
+      text-align: center;
+      padding: 8px 12px;
+      background: rgba(74, 144, 226, 0.1);
+      border-radius: 12px;
+      font-size: 13px;
+      color: #4A90E2;
+      margin-bottom: 8px;
     }
     
     /* Элементы поля ввода */
