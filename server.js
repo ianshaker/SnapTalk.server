@@ -283,97 +283,28 @@ app.get('/api/debug/widget-routes', (req, res) => {
 app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 app.get('/favicon.ico', (_req, res) => res.sendStatus(204));
 
-// Главная страница с демонстрацией
+// API информация - управление через https://snaptalk.lovable.app/
 app.get('/', (req, res) => {
-  const demoKey = 'demo-snaptalk-2025';
   const serverUrl = req.protocol + '://' + req.get('host');
   
-  const htmlContent = `
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SnapTalk Server - Live Chat Widget</title>
-    <style>
-        body { 
-            font-family: system-ui, -apple-system, sans-serif; 
-            max-width: 800px; 
-            margin: 0 auto; 
-            padding: 2rem; 
-            line-height: 1.6;
-        }
-        .hero { 
-            text-align: center; 
-            margin-bottom: 3rem; 
-            padding: 2rem; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 1rem;
-        }
-        .section { 
-            background: #f8fafc; 
-            padding: 1.5rem; 
-            border-radius: 0.5rem; 
-            margin-bottom: 2rem; 
-        }
-        .code { 
-            background: #1e293b; 
-            color: #e2e8f0; 
-            padding: 1rem; 
-            border-radius: 0.5rem; 
-            font-family: 'Monaco', 'Menlo', monospace; 
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-        .api-endpoint {
-            background: #0ea5e9;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 0.25rem;
-            font-family: monospace;
-            display: inline-block;
-            margin: 0.25rem;
-        }
-    </style>
-</head>
-<body>
-    <div class="hero">
-        <h1>🚀 SnapTalk Server</h1>
-        <p>Modern live chat widget with Telegram integration</p>
-    </div>
-
-    <div class="section">
-        <h2>💻 Embed Code для клиентов</h2>
-        <p>Просто вставьте этот код на свой сайт:</p>
-        <div class="code">&lt;script src="${serverUrl}/api/widget.js?key=${demoKey}" async&gt;&lt;/script&gt;</div>
-        <p><strong>Это всё!</strong> Виджет автоматически загрузится со всеми настройками стилей с сервера.</p>
-    </div>
-
-    <div class="section">
-        <h2>🔧 API Endpoints</h2>
-        
-        <h3>Для клиентов:</h3>
-        <div class="api-endpoint">GET /api/widget.js?key=API_KEY</div> - Получить JavaScript код виджета<br>
-        <div class="api-endpoint">GET /api/widget/config?key=API_KEY</div> - Получить JSON конфигурацию<br>
-        <div class="api-endpoint">POST /api/chat/send</div> - Отправить сообщение в Telegram<br>
-        <div class="api-endpoint">WebSocket /ws?clientId=ID</div> - Получать ответы в реальном времени<br>
-        
-        <h3>SnapTalk Frontend Integration (Auth required):</h3>
-        <div class="api-endpoint">POST /api/snaptalk/clients/create</div> - Создать клиента из фронтенда<br>
-        <div class="api-endpoint">GET /api/snaptalk/clients</div> - Получить список клиентов<br>
-        <div class="api-endpoint">GET /api/snaptalk/clients/:id</div> - Получить данные клиента<br>
-        <div class="api-endpoint">PUT /api/snaptalk/clients/:id</div> - Обновить клиента<br>
-        <div class="api-endpoint">DELETE /api/snaptalk/clients/:id</div> - Удалить клиента<br>
-    </div>
-
-    <!-- Подключаем демо виджет -->
-    <script src="/api/widget.js?key=${demoKey}" async></script>
-</body>
-</html>
-  `;
-  
-  res.type('text/html').send(htmlContent);
+  res.json({
+    name: 'SnapTalk Server',
+    version: '1.0.0',
+    status: 'running',
+    description: 'Live chat widget backend with Telegram integration',
+    frontend: 'https://snaptalk.lovable.app/',
+    documentation: {
+      widget_embed: `<script src="${serverUrl}/api/widget.js?key=YOUR_API_KEY" async></script>`,
+      websocket: `wss://${req.get('host')}/ws?clientId=CLIENT_ID`
+    },
+    endpoints: {
+      widget: '/api/widget.js?key=API_KEY',
+      config: '/api/widget/config?key=API_KEY', 
+      send_message: '/api/chat/send',
+      websocket: '/ws?clientId=CLIENT_ID',
+      health: '/health'
+    }
+  });
 });
 
 // ===== API: сайт -> Telegram =====
