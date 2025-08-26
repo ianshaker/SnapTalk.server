@@ -4,18 +4,14 @@ export function generateChatWindow() {
   return `
     /* ===== CHAT WINDOW STRUCTURE ===== */
     
-    /* Чат-окно - Apple Glassmorphism */
+    /* Чат-окно - 3 отдельные части */
     .snaptalk-chat {
       width: 380px;
       height: 520px;
-      background: rgba(255, 255, 255, 0.15);
       border-radius: 24px;
       box-shadow: 
         0 25px 45px -12px rgba(0, 0, 0, 0.08),
         0 0 0 1px rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
       overflow: hidden;
       animation: snaptalk-smooth-show 0.3s ease-out;
       display: flex;
@@ -23,24 +19,74 @@ export function generateChatWindow() {
       transform-origin: bottom right;
     }
     
-    /* Заголовок чата - Apple Glassmorphism */
+    /* 🔵 ЧАСТЬ 1: ШАПКА - Цвет компании */
     .snaptalk-chat-header {
-      background: linear-gradient(135deg, 
-        rgba(var(--snaptalk-primary-rgb), 0.9) 0%, 
-        rgba(var(--snaptalk-secondary-rgb), 0.9) 100%);
-      color: white;
-      padding: 18px 20px;
+      background: linear-gradient(135deg, var(--snaptalk-primary), var(--snaptalk-primary-hover));
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 24px 24px 0 0;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
       display: flex;
       align-items: center;
-      gap: 14px;
-      border-radius: 24px 24px 0 0;
-      position: relative;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      gap: 12px;
+      flex-shrink: 0;
     }
     
-    /* Кнопка закрытия удалена по просьбе пользователя */
+    /* 💬 ЧАСТЬ 2: ПЕРЕПИСКА - Светлый blur */
+    .snaptalk-messages-area {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* ⌨️ ЧАСТЬ 3: ПОЛЕ ВВОДА - Темная секция */
+    .snaptalk-input-area {
+      background: rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border-radius: 0 0 24px 24px;
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    
+    /* Элементы шапки */
+    .snaptalk-header-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--snaptalk-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .snaptalk-header-info {
+      flex: 1;
+    }
+    
+    .snaptalk-header-name {
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 2px 0;
+    }
+    
+    .snaptalk-header-status {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13px;
+      margin: 0;
+    }
     
     .snaptalk-chat-avatar {
       width: 32px;
@@ -72,6 +118,61 @@ export function generateChatWindow() {
       margin: 0;
       font-size: 12px;
       opacity: 0.8;
+    }
+    
+    /* Элементы поля ввода */
+    .snaptalk-input-wrapper {
+      flex: 1;
+    }
+    
+    .snaptalk-input-field {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 22px;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #333;
+      resize: none;
+      outline: none;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    
+    .snaptalk-input-field:focus {
+      border-color: var(--snaptalk-primary);
+      box-shadow: 0 0 0 3px rgba(var(--snaptalk-primary-rgb), 0.1);
+    }
+    
+    .snaptalk-input-field::placeholder {
+      color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .snaptalk-send-button {
+      width: 44px;
+      height: 44px;
+      background: var(--snaptalk-primary);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .snaptalk-send-button:hover {
+      background: var(--snaptalk-primary-hover);
+      transform: scale(1.05);
+    }
+    
+    .snaptalk-send-button:active {
+      transform: scale(0.95);
     }
   `;
 }

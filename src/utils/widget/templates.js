@@ -31,44 +31,48 @@ export function generateWidgetHTML(texts) {
 
 export function generateChatHTML(texts) {
   return `
-    <!-- Чат-окно -->
+    <!-- Чат-окно: 3 отдельные части -->
     <div class="snaptalk-chat snaptalk-hidden" id="snaptalk-chat">
-      <!-- Заголовок чата -->
+      
+      <!-- 🔵 ЧАСТЬ 1: ШАПКА (Header) -->
       <div class="snaptalk-chat-header">
-        <div class="snaptalk-chat-avatar" id="snaptalk-chat-avatar"></div>
-        <div class="snaptalk-chat-info">
-          <h3>\${WIDGET_TEXTS.managerName || 'Поддержка'}</h3>
-          <p id="snaptalk-status">\${WIDGET_TEXTS.managerStatus || 'Онлайн'}</p>
+        <div class="snaptalk-header-avatar" id="snaptalk-chat-avatar"></div>
+        <div class="snaptalk-header-info">
+          <h3 class="snaptalk-header-name">\${WIDGET_TEXTS.managerName || 'Поддержка'}</h3>
+          <p class="snaptalk-header-status" id="snaptalk-status">\${WIDGET_TEXTS.managerStatus || 'Онлайн'}</p>
         </div>
       </div>
       
-      <!-- Статус подключения -->
-      <div class="snaptalk-connection-status" id="snaptalk-connection-status">
-        Подключение...
-      </div>
-      
-      <!-- Область сообщений -->
-      <div class="snaptalk-messages" id="snaptalk-messages">
-        <div class="snaptalk-message system">
-          Чат начат. Мы обычно отвечаем в течение нескольких минут.
+      <!-- 💬 ЧАСТЬ 2: ПЕРЕПИСКА (Messages Area) -->
+      <div class="snaptalk-messages-area">
+        <!-- Статус подключения -->
+        <div class="snaptalk-connection-status" id="snaptalk-connection-status">
+          Подключение...
+        </div>
+        
+        <!-- Область сообщений -->
+        <div class="snaptalk-messages" id="snaptalk-messages">
+          <div class="snaptalk-message system">
+            Чат начат. Мы обычно отвечаем в течение нескольких минут.
+          </div>
         </div>
       </div>
       
-      <!-- Поле ввода -->
+      <!-- ⌨️ ЧАСТЬ 3: ПОЛЕ ВВОДА (Input Area) -->
       <div class="snaptalk-input-area">
-        <textarea
-          id="snaptalk-input"
-          class="snaptalk-input"
-          placeholder="\${WIDGET_TEXTS.inputPlaceholder || 'Введите ваше сообщение...'}"
-          rows="1"
-        ></textarea>
-        <button id="snaptalk-send" class="snaptalk-send-btn" aria-label="Отправить">
-          <svg class="snaptalk-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22,2 15,22 11,13 2,9"></polygon>
-          </svg>
+        <div class="snaptalk-input-wrapper">
+          <textarea
+            id="snaptalk-input"
+            class="snaptalk-input-field"
+            placeholder="\${WIDGET_TEXTS.inputPlaceholder || 'Введите ваше сообщение...'}"
+            rows="1"
+          ></textarea>
+        </div>
+        <button id="snaptalk-send" class="snaptalk-send-button" aria-label="Отправить">
+          →
         </button>
       </div>
+      
     </div>
   `;
 }
