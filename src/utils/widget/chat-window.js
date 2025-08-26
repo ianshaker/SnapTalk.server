@@ -96,14 +96,23 @@ export function generateChatWindow() {
       gap: 12px;
     }
     
+    /* Контейнер для центрирования статуса */
+    .snaptalk-messages-area {
+      text-align: center; /* Центрирование капсулы статуса */
+    }
+    
     .snaptalk-connection-status {
+      display: inline-block; /* Компактная капсула */
+      padding: 6px 12px;
+      background: rgba(34, 197, 94, 0.15); /* Зеленый фон */
+      border: 1px solid rgba(34, 197, 94, 0.3); /* Зеленая обводка */
+      border-radius: 16px; /* Скругленная капсула */
+      font-size: 12px;
+      font-weight: 500;
+      color: #059669; /* Зеленый текст */
+      margin: 0 auto 8px auto; /* Центрирование */
       text-align: center;
-      padding: 8px 12px;
-      background: rgba(74, 144, 226, 0.1);
-      border-radius: 12px;
-      font-size: 13px;
-      color: #4A90E2;
-      margin-bottom: 8px;
+      width: fit-content; /* Только по ширине текста */
     }
     
     /* Элементы поля ввода */
