@@ -4,28 +4,34 @@ export function generateChatStyles() {
   return `
     /* ===== CHAT WINDOW STYLES ===== */
     
-    /* Чат-окно */
+    /* Чат-окно - премиальный дизайн */
     .snaptalk-chat {
-      width: 350px;
-      height: 500px;
-      background: var(--snaptalk-bg);
-      border-radius: 16px;
-      box-shadow: var(--snaptalk-shadow-lg);
-      border: 1px solid var(--snaptalk-border);
+      width: 380px;
+      height: 520px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: var(--snaptalk-radius-lg);
+      box-shadow: var(--snaptalk-shadow-premium);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(20px);
       overflow: hidden;
-      animation: snaptalk-slide-up 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: snaptalk-elegant-entrance 0.6s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       flex-direction: column;
+      transform-origin: bottom right;
     }
     
-    /* Заголовок чата */
+    /* Заголовок чата - стиль Apple */
     .snaptalk-chat-header {
       background: var(--snaptalk-gradient);
       color: white;
-      padding: 16px 20px;
+      padding: 18px 20px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
+      border-radius: var(--snaptalk-radius-lg) var(--snaptalk-radius-lg) 0 0;
+      position: relative;
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     
     .snaptalk-back-btn {
@@ -88,32 +94,41 @@ export function generateChatStyles() {
       gap: 12px;
     }
     
-    /* Стили сообщений */
+    /* Стили сообщений - стиль Apple Messages */
     .snaptalk-message {
       display: flex;
-      max-width: 80%;
+      max-width: 85%;
+      margin-bottom: 8px;
+      animation: snaptalk-bubble-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     .snaptalk-message.user {
       align-self: flex-end;
-      background: var(--snaptalk-primary);
+      background: var(--snaptalk-gradient);
       color: white;
-      padding: 10px 14px;
+      padding: 12px 16px;
       border-radius: 18px 18px 4px 18px;
-      font-size: 14px;
+      font-size: 15px;
       word-wrap: break-word;
+      box-shadow: var(--snaptalk-shadow-message);
+      backdrop-filter: blur(10px);
+      margin-left: auto;
     }
     
     .snaptalk-message.manager {
       align-self: flex-start;
-      background: white;
+      background: linear-gradient(135deg, 
+        rgba(241, 243, 244, 0.95) 0%, 
+        rgba(255, 255, 255, 0.95) 100%);
       color: var(--snaptalk-text);
-      padding: 10px 14px;
+      padding: 12px 16px;
       border-radius: 18px 18px 18px 4px;
-      border: 1px solid var(--snaptalk-border);
-      font-size: 14px;
+      border: 1px solid var(--snaptalk-border-light);
+      font-size: 15px;
       word-wrap: break-word;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      box-shadow: var(--snaptalk-shadow-message);
+      backdrop-filter: blur(10px);
+      margin-right: auto;
     }
     
     .snaptalk-message.system {
@@ -126,28 +141,33 @@ export function generateChatStyles() {
       text-align: center;
     }
     
-    /* Поле ввода */
+    /* Поле ввода - стиль Apple */
     .snaptalk-input-area {
-      padding: 16px;
-      border-top: 1px solid var(--snaptalk-border);
-      background: white;
+      padding: 16px 20px 20px 20px;
+      border-top: 1px solid var(--snaptalk-border-light);
+      background: rgba(248, 250, 252, 0.8);
+      backdrop-filter: blur(10px);
       display: flex;
       gap: 12px;
       align-items: flex-end;
+      border-radius: 0 0 var(--snaptalk-radius-lg) var(--snaptalk-radius-lg);
     }
     
     .snaptalk-input {
       flex: 1;
-      border: 1px solid var(--snaptalk-border);
-      border-radius: 20px;
-      padding: 10px 16px;
-      font-size: 14px;
+      border: 1px solid var(--snaptalk-border-light);
+      border-radius: var(--snaptalk-radius-xl);
+      padding: 14px 18px;
+      font-size: 15px;
       font-family: inherit;
       resize: none;
       outline: none;
-      transition: border-color 0.2s ease;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      transition: all var(--snaptalk-transition-normal);
       max-height: 100px;
-      min-height: 40px;
+      min-height: 44px;
       line-height: 1.4;
     }
     
@@ -157,23 +177,26 @@ export function generateChatStyles() {
     }
     
     .snaptalk-send-btn {
-      background: var(--snaptalk-primary);
+      background: var(--snaptalk-gradient);
       border: none;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
+      border-radius: var(--snaptalk-radius-full);
+      width: 44px;
+      height: 44px;
       color: white;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s ease;
+      transition: all var(--snaptalk-transition-normal);
       flex-shrink: 0;
+      box-shadow: var(--snaptalk-shadow-button);
+      backdrop-filter: blur(10px);
     }
     
     .snaptalk-send-btn:hover {
-      background: var(--snaptalk-primary-hover);
-      transform: scale(1.05);
+      background: var(--snaptalk-hover-gradient);
+      transform: scale(1.08) translateY(-1px);
+      box-shadow: var(--snaptalk-shadow-premium);
     }
     
     .snaptalk-send-btn:disabled {
@@ -234,9 +257,14 @@ export function generateChatStyles() {
       }
       
       .snaptalk-chat {
-        width: calc(100vw - 2rem);
-        height: calc(100vh - 4rem);
-        max-height: 600px;
+        width: calc(100vw - 1rem);
+        height: calc(100vh - 2rem);
+        max-height: none;
+        border-radius: var(--snaptalk-radius-lg);
+        bottom: 1rem;
+        right: 0.5rem;
+        left: 0.5rem;
+        animation: snaptalk-elegant-entrance 0.6s cubic-bezier(0.4, 0, 0.2, 1);
       }
       
       .snaptalk-message {
