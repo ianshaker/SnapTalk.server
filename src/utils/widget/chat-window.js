@@ -49,11 +49,8 @@ export function generateChatWindow() {
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
-    /* ⌨️ ПОЛЕ ВВОДА - Чистый стиль без обрамления */
+    /* ⌨️ ПОЛЕ ВВОДА - Кнопка внутри input */
     .snaptalk-input-area {
-      display: flex;
-      gap: 12px;
-      align-items: center; /* ЦЕНТРИРОВАНИЕ ПО ВЕРТИКАЛИ - исправлено */
       flex-shrink: 0;
       padding: 10px 0; /* УМЕНЬШЕННЫЙ отступ: 16px → 10px */
       background: transparent; /* Прозрачный фон */
@@ -111,7 +108,8 @@ export function generateChatWindow() {
     
     /* Элементы поля ввода */
     .snaptalk-input-wrapper {
-      flex: 1;
+      position: relative; /* Для абсолютного позиционирования кнопки */
+      width: 100%; /* На всю ширину */
     }
     
     .snaptalk-input-field {
@@ -119,7 +117,7 @@ export function generateChatWindow() {
       background: white; /* Чистый белый фон */
       border: 1.5px solid rgba(0, 0, 0, 0.1);
       border-radius: 25px; /* Более круглый */
-      padding: 14px 18px;
+      padding: 14px 58px 14px 18px; /* ОТСТУП СПРАВА для кнопки: 58px */
       font-size: 14px;
       color: #333;
       resize: none;
@@ -141,31 +139,34 @@ export function generateChatWindow() {
     }
     
     .snaptalk-send-button {
-      width: 46px;
-      height: 46px;
+      position: absolute; /* АБСОЛЮТНОЕ позиционирование */
+      right: 6px; /* Отступ от правого края */
+      top: 50%; /* По центру по вертикали */
+      transform: translateY(-50%); /* Центрирование */
+      width: 40px; /* Немного меньше для input */
+      height: 40px;
       background: var(--snaptalk-primary);
       border: none;
       border-radius: 50%;
       color: white;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
-      box-shadow: 0 3px 12px rgba(var(--snaptalk-primary-rgb), 0.3); /* Цветная тень */
-      transform: translateY(-1px); /* ПОДНИМАЕМ кнопку на 1px для выравнивания */
-      /* Убираем backdrop-filter */
+      box-shadow: 0 2px 8px rgba(var(--snaptalk-primary-rgb), 0.25); /* Меньше тень */
+      /* Убираем старое translateY(-1px) */
     }
     
     .snaptalk-send-button:hover {
       background: var(--snaptalk-primary-hover);
-      transform: translateY(-1px) scale(1.05); /* Сохраняем смещение + увеличение */
+      transform: translateY(-50%) scale(1.05); /* Центрирование + увеличение */
     }
     
     .snaptalk-send-button:active {
-      transform: translateY(-1px) scale(0.95); /* Сохраняем смещение + уменьшение */
+      transform: translateY(-50%) scale(0.95); /* Центрирование + уменьшение */
     }
   `;
 }
