@@ -141,8 +141,7 @@ export function generateChatWindow() {
     .snaptalk-send-button {
       position: absolute; /* АБСОЛЮТНОЕ позиционирование */
       right: 6px; /* Отступ от правого края */
-      top: 50%; /* По центру по вертикали */
-      transform: translateY(-50%); /* Центрирование */
+      top: 7px; /* ТОЧНОЕ ЦЕНТРИРОВАНИЕ - калибровка */
       width: 40px; /* Немного меньше для input */
       height: 40px;
       background: var(--snaptalk-primary);
@@ -157,16 +156,16 @@ export function generateChatWindow() {
       justify-content: center;
       transition: all 0.2s ease;
       box-shadow: 0 2px 8px rgba(var(--snaptalk-primary-rgb), 0.25); /* Меньше тень */
-      /* Убираем старое translateY(-1px) */
+      /* Убираем transform: translateY для точного позиционирования */
     }
     
     .snaptalk-send-button:hover {
       background: var(--snaptalk-primary-hover);
-      transform: translateY(-50%) scale(1.05); /* Центрирование + увеличение */
+      transform: scale(1.05); /* Только увеличение */
     }
     
     .snaptalk-send-button:active {
-      transform: translateY(-50%) scale(0.95); /* Центрирование + уменьшение */
+      transform: scale(0.95); /* Только уменьшение */
     }
   `;
 }
