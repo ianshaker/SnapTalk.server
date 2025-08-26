@@ -130,8 +130,8 @@ async function ensureTopic(clientId, client, visitorId = null, requestId = null,
   }
 
   const title = `Client #${clientId} (${client?.client_name || 'Unknown'})`;
-  const url = `https://api.telegram.org/bot${botToken}/createForumTopic`;
-  const { data } = await axios.post(url, {
+  const telegramUrl = `https://api.telegram.org/bot${botToken}/createForumTopic`;
+  const { data } = await axios.post(telegramUrl, {
     chat_id: groupId,
     name: title
   });
@@ -150,7 +150,7 @@ async function sendToTopic({ clientId, text, prefix = '', client, visitorId = nu
   const botToken = client?.telegram_bot_token || BOT_TOKEN;
   const groupId = client?.telegram_group_id || SUPERGROUP_ID;
 
-  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
   const msg = `${prefix}${text}`.slice(0, 4096);
   const payload = {
     chat_id: groupId,
@@ -161,7 +161,7 @@ async function sendToTopic({ clientId, text, prefix = '', client, visitorId = nu
   };
   
   console.log(`📤 Sending to Telegram: bot=${botToken.slice(0,10)}..., group=${groupId}, topic=${topicId}`);
-  const { data } = await axios.post(url, payload);
+  const { data } = await axios.post(telegramApiUrl, payload);
   if (!data?.ok) throw new Error('sendMessage failed: ' + JSON.stringify(data));
   console.log(`✅ Message sent to Telegram topic ${topicId}`);
   return data.result;
