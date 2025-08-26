@@ -109,8 +109,9 @@ export function generateWidgetStyles(colorConfig, position) {
       position: relative;
       margin-bottom: 1.5rem;
       animation: snaptalk-elegant-slide-in 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-      max-width: 340px;
+      max-width: 380px;
       transform-origin: bottom right;
+      transition: all var(--snaptalk-transition-normal);
     }
     
     /* Кнопки закрытия удалены по просьбе пользователя */
@@ -128,6 +129,23 @@ export function generateWidgetStyles(colorConfig, position) {
       display: flex;
       align-items: flex-end;
       gap: 12px;
+      flex: 1;
+      min-width: 0;
+      transition: all var(--snaptalk-transition-normal);
+    }
+    
+    /* Когда кнопка ответить скрыта - контейнер ближе к краю */
+    .snaptalk-message-content:has(.snaptalk-reply-btn.snaptalk-hidden) {
+      margin-right: 8px;
+    }
+    
+    /* Специальный класс для широкого пузыря когда кнопка скрыта */
+    .snaptalk-message-content.snaptalk-wide-bubble {
+      margin-right: 12px;
+    }
+    
+    .snaptalk-message-content.snaptalk-wide-bubble .snaptalk-message-bubble {
+      max-width: 360px;
       flex: 1;
     }
     
@@ -169,10 +187,10 @@ export function generateWidgetStyles(colorConfig, position) {
       z-index: 1;
     }
     
-    /* Пузырь сообщения - Apple Glassmorphism */
+    /* Пузырь сообщения - Apple Glassmorphism с адаптивной шириной */
     .snaptalk-message-bubble {
       position: relative;
-      max-width: 290px;
+      max-width: 350px;
       border-radius: 18px 18px 18px 4px;
       padding: 14px 18px 16px 18px;
       background: rgba(255, 255, 255, 0.15);
@@ -182,6 +200,13 @@ export function generateWidgetStyles(colorConfig, position) {
       -webkit-backdrop-filter: blur(15px);
       animation: snaptalk-bubble-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
       transition: all var(--snaptalk-transition-normal);
+      flex: 1;
+    }
+    
+    /* Когда кнопка "Ответить" скрыта - пузырь может быть шире */
+    .snaptalk-reply-btn.snaptalk-hidden + .snaptalk-message-bubble,
+    .snaptalk-message-content:has(.snaptalk-reply-btn.snaptalk-hidden) .snaptalk-message-bubble {
+      max-width: 320px;
     }
     
     /* Хвостик сообщения - стиль Telegram */
@@ -214,7 +239,7 @@ export function generateWidgetStyles(colorConfig, position) {
       background: var(--snaptalk-gradient);
       color: white;
       border: none;
-      padding: 8px 16px;
+      padding: 10px 18px;
       border-radius: var(--snaptalk-radius-lg);
       font-size: 14px;
       font-weight: 600;
@@ -228,6 +253,9 @@ export function generateWidgetStyles(colorConfig, position) {
       letter-spacing: 0.02em;
       white-space: nowrap;
       flex-shrink: 0;
+      min-width: auto;
+      height: fit-content;
+      align-self: flex-end;
     }
     
     .snaptalk-reply-btn::before {

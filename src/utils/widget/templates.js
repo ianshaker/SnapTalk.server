@@ -19,7 +19,7 @@ export function generateWidgetHTML(texts) {
             <p class="snaptalk-message-text" id="snaptalk-greeting-text"></p>
           </div>
           <button class="snaptalk-reply-btn snaptalk-hidden" id="snaptalk-reply">
-            ✨ \${WIDGET_TEXTS.reply || 'Ответить'}
+            \${WIDGET_TEXTS.reply || 'Ответить'}
           </button>
         </div>
       </div>
