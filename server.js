@@ -19,6 +19,7 @@ import {
 } from './src/config/env.js';
 import snapTalkRoutes from './src/routes/snapTalkClients.js';
 import widgetRoutes from './src/routes/widgets.js';
+import adminRoutes from './src/routes/adminRoutes.js';
 import { apiKeys, loadActiveClientsToApiKeys, updateClientInApiKeys } from './src/routes/snapTalkClients.js';
 import { supabaseDB } from './src/config/supabase.js';
 import { 
@@ -61,163 +62,15 @@ app.use(bodyParser.json({ limit: '1mb' }));
 // ===== Маршруты API =====
 app.use('/api/snaptalk', snapTalkRoutes);
 app.use('/api', widgetRoutes);
+app.use('/api', adminRoutes);
 
-// ===== Административные эндпоинты =====
-app.get('/api/admin/reload-clients', async (req, res) => {
-  try {
-    await loadActiveClientsToApiKeys();
-    res.json({
-      success: true,
-      message: 'Active clients reloaded',
-      apiKeysCount: apiKeys.size
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
 
-app.post('/api/admin/sync-client/:apiKey', async (req, res) => {
-  try {
-    const { apiKey } = req.params;
-    
-    if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        error: 'API key required'
-      });
-    }
-
-    const updated = await updateClientInApiKeys(apiKey);
-    
-    res.json({
-      success: true,
-      updated,
-      message: updated 
-        ? `Client ${apiKey} cache updated successfully`
-        : `Client ${apiKey} not found or inactive`,
-      apiKeysCount: apiKeys.size
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-app.get('/api/admin/api-keys', (req, res) => {
-  const keys = Array.from(apiKeys.keys());
-  res.json({ 
-    success: true, 
-    apiKeys: keys,
-    total: keys.length 
-  });
-});
-
-// Создание таблицы client_topics через простую проверку
-app.post('/api/admin/create-topics-table', async (req, res) => {
-  try {
-    if (!sb) {
-      return res.status(500).json({ success: false, error: 'Supabase not configured' });
-    }
-
-    console.log('🔧 Creating client_topics table...');
-
-    // Пробуем создать запись для проверки существования таблицы
-    const { error: testError } = await sb
-      .from('client_topics')
-      .select('id')
-      .limit(1);
-
-    if (testError && testError.code === 'PGRST205') {
-      // Таблица не существует - нужно создать вручную в Supabase Dashboard
-      console.log('❌ Table client_topics does not exist. Please create it manually in Supabase Dashboard.');
-      return res.json({ 
-        success: false, 
-        error: 'Table does not exist',
-        instructions: 'Please create table client_topics manually in Supabase Dashboard with SQL migration'
-      });
-    }
-
-    console.log('✅ client_topics table exists');
-    res.json({ success: true, message: 'client_topics table exists' });
-
-  } catch (error) {
-    console.error('❌ Create table error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.get('/api/admin/debug-clients', async (req, res) => {
-  try {
-    console.log('🔍 Debug clients request - checking Supabase connection...');
-    
-    const { data: allClients, error } = await supabaseDB
-      .from('clients')
-      .select('id, client_name, api_key, integration_status, telegram_bot_token, telegram_group_id')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (error) {
-      console.error('❌ Supabase query error:', error);
-      return res.status(500).json({ success: false, error: error.message });
-    }
-
-    console.log(`✅ Found ${allClients?.length || 0} clients in Supabase`);
-
-    res.json({ 
-      success: true, 
-      clients: allClients || [],
-      total: allClients?.length || 0,
-      supabaseUrl: SUPABASE_URL,
-      hasServiceKey: !!SUPABASE_SERVICE_ROLE
-    });
-  } catch (error) {
-    console.error('❌ Debug clients error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Debug: проверка подключения виджетов
-app.get('/api/debug/widget-routes', (req, res) => {
-  res.json({
-    message: 'Widget routes are handled by /src/routes/widgets.js',
-    expectedEndpoint: '/api/widget.js',
-    demoTest: '/api/widget.js?key=demo-snaptalk-2025',
-    timestamp: new Date().toISOString()
-  });
-});
 
 // ===== Основные руты =====
 app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 app.get('/favicon.ico', (_req, res) => res.sendStatus(204));
 
-// API информация - управление через https://snaptalk.lovable.app/
-app.get('/', (req, res) => {
-  const serverUrl = req.protocol + '://' + req.get('host');
-  
-  res.json({
-    name: 'SnapTalk Server',
-    version: '1.0.0',
-    status: 'running',
-    description: 'Live chat widget backend with Telegram integration',
-    frontend: 'https://snaptalk.lovable.app/',
-    documentation: {
-      widget_embed: `<script src="${serverUrl}/api/widget.js?key=YOUR_API_KEY" async></script>`,
-      websocket: `wss://${req.get('host')}/ws?clientId=CLIENT_ID`
-    },
-    endpoints: {
-      widget: '/api/widget.js?key=API_KEY',
-      config: '/api/widget/config?key=API_KEY', 
-      send_message: '/api/chat/send',
-      websocket: '/ws?clientId=CLIENT_ID',
-      health: '/health'
-    }
-  });
-});
+
 
 // ===== API: Автоматический трекинг визитов =====
 app.post('/api/visit/track', async (req, res) => {
