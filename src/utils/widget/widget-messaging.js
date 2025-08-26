@@ -78,7 +78,9 @@ export function generateWidgetMessaging() {
             clientId: CLIENT_ID,
             apiKey: API_KEY,
             text: text,
-            meta: meta
+            meta: meta,
+            visitorId: this.visitorId,   // FingerprintJS visitor ID
+            requestId: this.requestId    // FingerprintJS request ID
           })
         });
         

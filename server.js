@@ -87,16 +87,29 @@ async function dbGetTopic(clientId) {
   return data?.topic_id ?? null;
 }
 
-async function dbSaveTopic(clientId, topicId) {
+async function dbSaveTopic(clientId, topicId, visitorId = null, requestId = null) {
   if (!sb) { memoryMap.set(clientId, topicId); return; }
+  
+  const topicData = { 
+    client_id: clientId, 
+    topic_id: topicId,
+    visitor_id: visitorId,
+    request_id: requestId,
+    fingerprint_data: visitorId ? { 
+      visitorId, 
+      requestId, 
+      timestamp: new Date().toISOString() 
+    } : null
+  };
+  
   const { error } = await sb
     .from('client_topics')
-    .upsert({ client_id: clientId, topic_id: topicId }, { onConflict: 'client_id' });
+    .upsert(topicData, { onConflict: 'client_id' });
   if (error) console.error('dbSaveTopic error', error);
 }
 
 // ===== Telegram helpers =====
-async function ensureTopic(clientId, client) {
+async function ensureTopic(clientId, client, visitorId = null, requestId = null) {
   let topicId = await dbGetTopic(clientId);
   if (topicId) return topicId;
 
@@ -117,13 +130,13 @@ async function ensureTopic(clientId, client) {
   if (!data?.ok) throw new Error('createForumTopic failed: ' + JSON.stringify(data));
   topicId = data.result.message_thread_id;
 
-  await dbSaveTopic(clientId, topicId);
-  console.log(`✅ Created topic ${topicId} for client ${client?.client_name || clientId}`);
+  await dbSaveTopic(clientId, topicId, visitorId, requestId);
+  console.log(`✅ Created topic ${topicId} for client ${client?.client_name || clientId}${visitorId ? ` [Visitor: ${visitorId.slice(0,8)}...]` : ''}`);
   return topicId;
 }
 
-async function sendToTopic({ clientId, text, prefix = '', client }) {
-  const topicId = await ensureTopic(clientId, client);
+async function sendToTopic({ clientId, text, prefix = '', client, visitorId = null, requestId = null }) {
+  const topicId = await ensureTopic(clientId, client, visitorId, requestId);
 
   // Используем настройки клиента
   const botToken = client?.telegram_bot_token || BOT_TOKEN;
@@ -310,7 +323,7 @@ app.get('/', (req, res) => {
 // ===== API: сайт -> Telegram =====
 app.post('/api/chat/send', async (req, res) => {
   try {
-    const { clientId, apiKey, text, meta } = req.body || {};
+    const { clientId, apiKey, text, meta, visitorId, requestId } = req.body || {};
     if (!clientId || !text) {
       return res.status(400).json({ ok: false, error: 'clientId and text required' });
     }
@@ -333,8 +346,8 @@ app.post('/api/chat/send', async (req, res) => {
     ].filter(Boolean);
     const prefix = prefixParts.length ? `${prefixParts.join(' / ')}\n\n` : `#${clientId}\n\n`;
 
-    console.log(`💬 Site → Telegram: "${text}" → ${clientId} (${client.client_name})`);
-    await sendToTopic({ clientId, text, prefix, client });
+    console.log(`💬 Site → Telegram: "${text}" → ${clientId} (${client.client_name})${visitorId ? ` [Visitor: ${visitorId.slice(0,8)}...]` : ''}`);
+    await sendToTopic({ clientId, text, prefix, client, visitorId, requestId });
     return res.json({ ok: true });
   } catch (e) {
     console.error(e);

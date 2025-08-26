@@ -8,7 +8,10 @@ export function generateWidgetCore() {
       this.messages = [];
       this.ws = null;
       this.connected = false;
+      this.visitorId = null;
+      this.requestId = null;
       
+      this.initFingerprint();
       this.init();
     }
     
@@ -104,6 +107,29 @@ export function generateWidgetCore() {
         input.style.height = 'auto';
         input.style.height = Math.min(input.scrollHeight, 100) + 'px';
       });
+    }
+    
+    // Инициализация FingerprintJS для идентификации пользователей
+    initFingerprint() {
+      try {
+        const fpPromise = import('https://fpjscdn.net/v3/7F2fEiOrnZIiAu3sAA7h')
+          .then(FingerprintJS => FingerprintJS.load({
+            region: "eu"
+          }));
+
+        fpPromise
+          .then(fp => fp.get())
+          .then(result => {
+            this.visitorId = result.visitorId;
+            this.requestId = result.requestId;
+            console.log('📌 SnapTalk FingerprintJS initialized:', result.visitorId);
+          })
+          .catch(error => {
+            console.warn('⚠️ FingerprintJS failed to initialize:', error);
+          });
+      } catch (error) {
+        console.warn('⚠️ FingerprintJS import failed:', error);
+      }
     }
   `;
 }
