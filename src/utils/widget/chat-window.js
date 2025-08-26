@@ -12,7 +12,7 @@ export function generateChatWindow() {
       display: flex;
       flex-direction: column;
       transform-origin: bottom right;
-      gap: 12px; /* Воздух между карточками */
+      gap: 8px; /* УМЕНЬШЕННЫЙ воздух между карточками: 12px → 8px */
       padding: 0;
       background: transparent;
     }
@@ -55,7 +55,7 @@ export function generateChatWindow() {
       gap: 12px;
       align-items: center; /* ЦЕНТРИРОВАНИЕ ПО ВЕРТИКАЛИ - исправлено */
       flex-shrink: 0;
-      padding: 16px 0; /* Только отступы, без фона */
+      padding: 10px 0; /* УМЕНЬШЕННЫЙ отступ: 16px → 10px */
       background: transparent; /* Прозрачный фон */
     }
     
@@ -155,16 +155,17 @@ export function generateChatWindow() {
       justify-content: center;
       transition: all 0.2s ease;
       box-shadow: 0 3px 12px rgba(var(--snaptalk-primary-rgb), 0.3); /* Цветная тень */
+      transform: translateY(-1px); /* ПОДНИМАЕМ кнопку на 1px для выравнивания */
       /* Убираем backdrop-filter */
     }
     
     .snaptalk-send-button:hover {
       background: var(--snaptalk-primary-hover);
-      transform: scale(1.05);
+      transform: translateY(-1px) scale(1.05); /* Сохраняем смещение + увеличение */
     }
     
     .snaptalk-send-button:active {
-      transform: scale(0.95);
+      transform: translateY(-1px) scale(0.95); /* Сохраняем смещение + уменьшение */
     }
   `;
 }
