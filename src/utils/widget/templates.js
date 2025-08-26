@@ -67,10 +67,10 @@ export function generateChatHTML(texts) {
             placeholder="\${WIDGET_TEXTS.inputPlaceholder || 'Введите ваше сообщение...'}"
             rows="1"
           ></textarea>
+          <button id="snaptalk-send" class="snaptalk-send-button" aria-label="Отправить">
+            →
+          </button>
         </div>
-        <button id="snaptalk-send" class="snaptalk-send-button" aria-label="Отправить">
-          →
-        </button>
       </div>
       
     </div>
