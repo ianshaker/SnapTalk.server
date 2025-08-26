@@ -20,6 +20,7 @@ import {
 import snapTalkRoutes from './src/routes/snapTalkClients.js';
 import widgetRoutes from './src/routes/widgets.js';
 import adminRoutes from './src/routes/adminRoutes.js';
+
 import { apiKeys, loadActiveClientsToApiKeys, updateClientInApiKeys } from './src/routes/snapTalkClients.js';
 import { supabaseDB } from './src/config/supabase.js';
 import { 
@@ -64,6 +65,7 @@ app.use(bodyParser.json({ limit: '1mb' }));
 app.use('/api/snaptalk', snapTalkRoutes);
 app.use('/api', widgetRoutes);
 app.use('/api', adminRoutes);
+
 
 
 
@@ -130,200 +132,7 @@ app.post('/api/visit/track', async (req, res) => {
   }
 });
 
-// ===== API: Аналитика визитов =====
-// Получить все визиты клиента с фильтрацией
-app.get('/api/analytics/visits/:clientId', async (req, res) => {
-  try {
-    const { clientId } = req.params;
-    const { apiKey, startDate, endDate, page, limit = 50 } = req.query;
 
-    // Проверяем API ключ
-    const client = await findClientByApiKey(apiKey);
-    if (!client || client.id !== clientId) {
-      return res.status(404).json({ ok: false, error: 'Client not found or invalid API key' });
-    }
-
-    if (!sb) {
-      return res.status(503).json({ ok: false, error: 'Database not available' });
-    }
-
-    let query = sb
-      .from('site_visits')
-      .select('*')
-      .eq('client_id', clientId)
-      .order('visit_timestamp', { ascending: false });
-
-    // Фильтр по датам
-    if (startDate) query = query.gte('visit_timestamp', startDate);
-    if (endDate) query = query.lte('visit_timestamp', endDate);
-
-    // Пагинация
-    const offset = page ? (parseInt(page) - 1) * parseInt(limit) : 0;
-    query = query.range(offset, offset + parseInt(limit) - 1);
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('❌ Analytics visits error:', error);
-      return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-
-    return res.json({ ok: true, visits: data, total: data.length });
-  } catch (e) {
-    console.error('Analytics visits error:', e);
-    return res.status(500).json({ ok: false, error: String(e.message || e) });
-  }
-});
-
-// Получить статистику по страницам
-app.get('/api/analytics/pages/:clientId', async (req, res) => {
-  try {
-    const { clientId } = req.params;
-    const { apiKey, startDate, endDate } = req.query;
-
-    const client = await findClientByApiKey(apiKey);
-    if (!client || client.id !== clientId) {
-      return res.status(404).json({ ok: false, error: 'Client not found or invalid API key' });
-    }
-
-    if (!sb) {
-      return res.status(503).json({ ok: false, error: 'Database not available' });
-    }
-
-    let query = sb
-      .from('site_visits')
-      .select('page_url, page_title')
-      .eq('client_id', clientId);
-
-    if (startDate) query = query.gte('visit_timestamp', startDate);
-    if (endDate) query = query.lte('visit_timestamp', endDate);
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('❌ Analytics pages error:', error);
-      return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-
-    // Группируем по URL
-    const pageStats = data.reduce((acc, visit) => {
-      const url = visit.page_url;
-      if (!acc[url]) {
-        acc[url] = { url, title: visit.page_title, visits: 0 };
-      }
-      acc[url].visits++;
-      return acc;
-    }, {});
-
-    const sortedPages = Object.values(pageStats).sort((a, b) => b.visits - a.visits);
-
-    return res.json({ ok: true, pages: sortedPages });
-  } catch (e) {
-    console.error('Analytics pages error:', e);
-    return res.status(500).json({ ok: false, error: String(e.message || e) });
-  }
-});
-
-// Получить статистику по источникам трафика (UTM)
-app.get('/api/analytics/sources/:clientId', async (req, res) => {
-  try {
-    const { clientId } = req.params;
-    const { apiKey, startDate, endDate } = req.query;
-
-    const client = await findClientByApiKey(apiKey);
-    if (!client || client.id !== clientId) {
-      return res.status(404).json({ ok: false, error: 'Client not found or invalid API key' });
-    }
-
-    if (!sb) {
-      return res.status(503).json({ ok: false, error: 'Database not available' });
-    }
-
-    let query = sb
-      .from('site_visits')
-      .select('utm_source, utm_medium, utm_campaign, referrer')
-      .eq('client_id', clientId);
-
-    if (startDate) query = query.gte('visit_timestamp', startDate);
-    if (endDate) query = query.lte('visit_timestamp', endDate);
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('❌ Analytics sources error:', error);
-      return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-
-    // Группируем по источникам
-    const sourceStats = data.reduce((acc, visit) => {
-      const source = visit.utm_source || 'direct';
-      const medium = visit.utm_medium || 'none';
-      const campaign = visit.utm_campaign || 'none';
-      const key = `${source}/${medium}/${campaign}`;
-      
-      if (!acc[key]) {
-        acc[key] = { source, medium, campaign, visits: 0 };
-      }
-      acc[key].visits++;
-      return acc;
-    }, {});
-
-    const sortedSources = Object.values(sourceStats).sort((a, b) => b.visits - a.visits);
-
-    return res.json({ ok: true, sources: sortedSources });
-  } catch (e) {
-    console.error('Analytics sources error:', e);
-    return res.status(500).json({ ok: false, error: String(e.message || e) });
-  }
-});
-
-// Получить общую статистику
-app.get('/api/analytics/summary/:clientId', async (req, res) => {
-  try {
-    const { clientId } = req.params;
-    const { apiKey, startDate, endDate } = req.query;
-
-    const client = await findClientByApiKey(apiKey);
-    if (!client || client.id !== clientId) {
-      return res.status(404).json({ ok: false, error: 'Client not found or invalid API key' });
-    }
-
-    if (!sb) {
-      return res.status(503).json({ ok: false, error: 'Database not available' });
-    }
-
-    let query = sb
-      .from('site_visits')
-      .select('visitor_id, visit_timestamp')
-      .eq('client_id', clientId);
-
-    if (startDate) query = query.gte('visit_timestamp', startDate);
-    if (endDate) query = query.lte('visit_timestamp', endDate);
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('❌ Analytics summary error:', error);
-      return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-
-    const totalVisits = data.length;
-    const uniqueVisitors = new Set(data.map(v => v.visitor_id)).size;
-    const avgVisitsPerVisitor = uniqueVisitors > 0 ? (totalVisits / uniqueVisitors).toFixed(2) : 0;
-
-    return res.json({ 
-      ok: true, 
-      summary: {
-        totalVisits,
-        uniqueVisitors,
-        avgVisitsPerVisitor: parseFloat(avgVisitsPerVisitor)
-      }
-    });
-  } catch (e) {
-    console.error('Analytics summary error:', e);
-    return res.status(500).json({ ok: false, error: String(e.message || e) });
-  }
-});
 
 // ===== API: сайт -> Telegram =====
 app.post('/api/chat/send', async (req, res) => {
