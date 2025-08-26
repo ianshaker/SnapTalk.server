@@ -208,8 +208,35 @@ async function ensureTopicForVisitor(clientId, client, visitorId = null, request
       if (isValidTopic) {
         console.log(`✅ Topic ${existingVisitor.topic_id} is valid - reusing for visitor`);
         
-        // 3️⃣ Обновляем информацию о последнем визите  
-        await dbSaveTopic(clientId, existingVisitor.topic_id, visitorId, requestId, url, meta);
+        // 3️⃣ Обновляем ТОЛЬКО метаданные последнего визита (НЕ создаем новую запись!)
+        try {
+          const { error } = await sb
+            .from('client_topics')
+            .update({
+              page_url: url,
+              page_title: meta?.title || null,
+              referrer: meta?.ref || null,
+              utm_source: meta?.utm?.source || null,
+              utm_medium: meta?.utm?.medium || null,
+              utm_campaign: meta?.utm?.campaign || null,
+              updated_at: new Date().toISOString(),
+              fingerprint_data: visitorId ? { 
+                visitorId, 
+                requestId, 
+                url,
+                meta,
+                timestamp: new Date().toISOString() 
+              } : null
+            })
+            .eq('client_id', clientId)
+            .eq('visitor_id', visitorId);
+          
+          if (error) console.error('❌ Update existing visitor error:', error);
+          else console.log(`🔄 Updated existing visitor metadata: ${visitorId.slice(0,8)}...`);
+        } catch (error) {
+          console.error('❌ Update existing visitor error:', error);
+        }
+        
         return {
           topicId: existingVisitor.topic_id,
           isExistingVisitor: true,
