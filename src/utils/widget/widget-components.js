@@ -125,7 +125,6 @@ export function generateWidgetComponents() {
       justify-content: center;
       box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
       border: 2.5px solid rgba(255, 255, 255, 0.95);
-      overflow: hidden;
       z-index: 3;
       font-size: 16px;
       font-weight: 600;
@@ -138,6 +137,7 @@ export function generateWidgetComponents() {
       height: 100%;
       object-fit: cover;
       border-radius: 50%;
+      overflow: hidden;
     }
     
     .snaptalk-bubble-avatar-fallback {
