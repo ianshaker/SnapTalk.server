@@ -23,6 +23,7 @@ export function generateWidgetHTML(texts) {
                 <path d="m11 11 6 6v-12l-6 6"/>
               </svg>
               <span>\${WIDGET_TEXTS.reply || 'Ответить'}</span>
+              <span class="snaptalk-pulse-dot"></span>
             </button>
           </div>
         </div>

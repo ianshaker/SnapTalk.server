@@ -192,7 +192,7 @@ export function generateWidgetStyles(colorConfig, position) {
     
     /* Когда кнопка внутри пузыря, добавляем padding снизу для неё */
     .snaptalk-message-bubble:has(.snaptalk-reply-btn:not(.snaptalk-hidden)) {
-      padding-bottom: 44px;
+      padding-bottom: 36px;
     }
     
     /* Хвостик сообщения - стиль Telegram */
@@ -223,12 +223,12 @@ export function generateWidgetStyles(colorConfig, position) {
     /* Кнопка "Ответить" - в правом нижнем углу пузыря */
     .snaptalk-reply-btn {
       position: absolute;
-      bottom: 8px;
+      bottom: 6px;
       right: 12px;
       background: transparent;
       color: var(--snaptalk-primary);
       border: none;
-      padding: 4px 8px;
+      padding: 3px 6px;
       border-radius: var(--snaptalk-radius-sm);
       font-size: 13px;
       font-weight: 700;
@@ -251,6 +251,17 @@ export function generateWidgetStyles(colorConfig, position) {
     
     .snaptalk-reply-btn span {
       font-weight: 700;
+    }
+    
+    /* Пульсирующая точка рядом с кнопкой */
+    .snaptalk-pulse-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--snaptalk-primary);
+      border-radius: 50%;
+      margin-left: 2px;
+      animation: snaptalk-pulse 1.5s ease-in-out infinite;
+      flex-shrink: 0;
     }
     
     .snaptalk-reply-btn:hover {
@@ -392,6 +403,21 @@ export function generateWidgetStyles(colorConfig, position) {
       }
       51%, 100% { 
         opacity: 0; 
+      }
+    }
+    
+    @keyframes snaptalk-pulse {
+      0% { 
+        opacity: 0.6;
+        transform: scale(1);
+      }
+      50% { 
+        opacity: 1;
+        transform: scale(1.2);
+      }
+      100% { 
+        opacity: 0.6;
+        transform: scale(1);
       }
     }
     
