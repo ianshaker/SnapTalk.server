@@ -56,7 +56,7 @@ export function generateWidgetComponents() {
     .snaptalk-greeting {
       position: relative;
       margin-bottom: 1.5rem;
-      animation: snaptalk-elegant-slide-in 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: snaptalk-fade-in 0.4s ease-out;
       max-width: 500px;
       transform-origin: bottom right;
       transition: all var(--snaptalk-transition-normal);

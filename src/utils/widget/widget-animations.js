@@ -15,16 +15,14 @@ export function generateWidgetAnimations() {
       }
     }
     
-    @keyframes snaptalk-elegant-slide-in {
+    @keyframes snaptalk-fade-in {
       0% {
         opacity: 0;
-        transform: translateX(100%) scale(0.8);
-        filter: blur(5px);
+        transform: scale(0.95);
       }
       100% {
         opacity: 1;
-        transform: translateX(0) scale(1);
-        filter: blur(0);
+        transform: scale(1);
       }
     }
     
