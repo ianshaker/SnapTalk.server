@@ -52,9 +52,14 @@ export async function dbGetTopic(clientId) {
 
 // 🆕 Поиск существующего посетителя по visitor_id
 export async function findExistingVisitor(clientId, visitorId) {
-  if (!sb || !visitorId) return null;
+  if (!sb || !visitorId) {
+    console.log(`❌ findExistingVisitor: No Supabase connection or visitorId`);
+    return null;
+  }
   
   try {
+    console.log(`🔍 Searching for existing visitor ${visitorId.slice(0,8)}... in client_topics for client ${clientId}`);
+    
     const { data, error } = await sb
       .from('client_topics')
       .select('topic_id, visitor_id, created_at, page_url')
@@ -65,6 +70,12 @@ export async function findExistingVisitor(clientId, visitorId) {
     if (error) {
       console.error('❌ findExistingVisitor error:', error);
       return null;
+    }
+    
+    if (data) {
+      console.log(`✅ Found existing visitor: topic_id=${data.topic_id}, created_at=${data.created_at}`);
+    } else {
+      console.log(`❌ No existing visitor found for ${visitorId.slice(0,8)}... in client ${clientId}`);
     }
     
     return data; // { topic_id, visitor_id, created_at, page_url } или null
@@ -106,6 +117,8 @@ export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId
     utm_source: meta?.utm?.source || null,
     utm_medium: meta?.utm?.medium || null,
     utm_campaign: meta?.utm?.campaign || null,
+    visit_type: 'page_visit', // 🔥 ДОБАВЛЕНО: обязательное поле из схемы!
+    updated_at: new Date().toISOString(), // 🔥 ДОБАВЛЕНО: время обновления
     fingerprint_data: visitorId ? { 
       visitorId, 
       requestId, 
@@ -128,24 +141,47 @@ export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId
       
       if (existing.data) {
         // Обновляем существующую запись
-        const { error } = await sb
+        console.log(`🔄 Updating existing record for visitor ${visitorId.slice(0,8)}... in client_topics`);
+        const { data, error } = await sb
           .from('client_topics')
           .update(topicData)
-          .eq('id', existing.data.id);
-        if (error) console.error('❌ dbSaveTopic update error:', error);
+          .eq('id', existing.data.id)
+          .select();
+        
+        if (error) {
+          console.error('❌ dbSaveTopic update error:', error);
+        } else {
+          console.log(`✅ dbSaveTopic update success:`, data);
+        }
       } else {
         // Создаем новую запись
-        const { error } = await sb
+        console.log(`🆕 Inserting new record for visitor ${visitorId.slice(0,8)}... to client_topics`);
+        const { data, error } = await sb
           .from('client_topics')
-          .insert(topicData);
-        if (error) console.error('❌ dbSaveTopic insert error:', error);
+          .insert(topicData)
+          .select();
+        
+        if (error) {
+          console.error('❌ dbSaveTopic insert error:', error);
+          console.error('❌ Failed topicData:', topicData);
+        } else {
+          console.log(`✅ dbSaveTopic insert success:`, data);
+        }
       }
     } else {
       // Для старых записей без visitor_id - upsert по client_id (обратная совместимость)
-      const { error } = await sb
+      console.log(`🔄 Upserting record for client ${clientId} (no visitor_id) to client_topics`);
+      const { data, error } = await sb
         .from('client_topics')
-        .upsert(topicData, { onConflict: 'client_id' });
-      if (error) console.error('❌ dbSaveTopic upsert error:', error);
+        .upsert(topicData, { onConflict: 'client_id' })
+        .select();
+      
+      if (error) {
+        console.error('❌ dbSaveTopic upsert error:', error);
+        console.error('❌ Failed topicData:', topicData);
+      } else {
+        console.log(`✅ dbSaveTopic upsert success:`, data);
+      }
     }
   } catch (error) {
     console.error('❌ dbSaveTopic error:', error);
