@@ -49,21 +49,14 @@ export function generateChatWindow() {
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
-    /* ⌨️ КАРТОЧКА 3: ПОЛЕ ВВОДА - Отдельная карточка */
+    /* ⌨️ ПОЛЕ ВВОДА - Чистый стиль без обрамления */
     .snaptalk-input-area {
-      background: rgba(0, 0, 0, 0.08);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border-radius: 20px; /* Полностью скругленная */
-      padding: 16px 20px;
       display: flex;
       gap: 12px;
       align-items: flex-end;
       flex-shrink: 0;
-      box-shadow: 
-        0 8px 24px rgba(0, 0, 0, 0.08),
-        0 0 0 1px rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 16px 0; /* Только отступы, без фона */
+      background: transparent; /* Прозрачный фон */
     }
     
     /* Элементы шапки */
@@ -123,30 +116,33 @@ export function generateChatWindow() {
     
     .snaptalk-input-field {
       width: 100%;
-      background: rgba(255, 255, 255, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 22px;
-      padding: 12px 16px;
+      background: white; /* Чистый белый фон */
+      border: 1.5px solid rgba(0, 0, 0, 0.1);
+      border-radius: 25px; /* Более круглый */
+      padding: 14px 18px;
       font-size: 14px;
       color: #333;
       resize: none;
       outline: none;
       transition: all 0.2s ease;
       font-family: inherit;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* Легкая тень */
     }
     
     .snaptalk-input-field:focus {
       border-color: var(--snaptalk-primary);
-      box-shadow: 0 0 0 3px rgba(var(--snaptalk-primary-rgb), 0.1);
+      box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        0 0 0 3px rgba(var(--snaptalk-primary-rgb), 0.15);
     }
     
     .snaptalk-input-field::placeholder {
-      color: rgba(0, 0, 0, 0.5);
+      color: rgba(0, 0, 0, 0.4);
     }
     
     .snaptalk-send-button {
-      width: 44px;
-      height: 44px;
+      width: 46px;
+      height: 46px;
       background: var(--snaptalk-primary);
       border: none;
       border-radius: 50%;
@@ -158,8 +154,8 @@ export function generateChatWindow() {
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
-      backdrop-filter: blur(6px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 3px 12px rgba(var(--snaptalk-primary-rgb), 0.3); /* Цветная тень */
+      /* Убираем backdrop-filter */
     }
     
     .snaptalk-send-button:hover {
