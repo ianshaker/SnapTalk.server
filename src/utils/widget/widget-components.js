@@ -101,7 +101,7 @@ export function generateWidgetComponents() {
     
     /* Когда кнопка внутри пузыря, добавляем padding снизу для неё */
     .snaptalk-message-bubble:has(.snaptalk-reply-btn:not(.snaptalk-hidden)) {
-      padding-bottom: 26px;
+      padding-bottom: 20px;
     }
     
     /* Мини-аватар внутри пузыря сообщения - правый верхний угол */
@@ -159,7 +159,7 @@ export function generateWidgetComponents() {
     /* Кнопка "Ответить" - в правом нижнем углу пузыря */
     .snaptalk-reply-btn {
       position: absolute;
-      bottom: 4px;
+      bottom: 2px;
       right: 12px;
       background: transparent;
       color: var(--snaptalk-primary);
