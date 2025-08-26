@@ -80,6 +80,18 @@ export function generateWidgetCore() {
     bindEvents() {
       document.getElementById('snaptalk-toggle').addEventListener('click', () => this.toggleWidget());
       document.getElementById('snaptalk-reply').addEventListener('click', () => this.openChat());
+      
+      // Mobile: весь пузырь кликабельный
+      const bubble = document.querySelector('.snaptalk-message-bubble');
+      if (bubble) {
+        bubble.addEventListener('click', (e) => {
+          // Только на мобильных и если клик не по кнопке
+          if (window.innerWidth <= 480 && !e.target.closest('.snaptalk-reply-btn')) {
+            this.openChat();
+          }
+        });
+      }
+      
       document.getElementById('snaptalk-send').addEventListener('click', () => this.sendMessage());
       
       const input = document.getElementById('snaptalk-input');

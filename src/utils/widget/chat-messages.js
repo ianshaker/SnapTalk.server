@@ -223,8 +223,18 @@ export function generateChatMessages() {
       }
       
       .snaptalk-reply-btn {
-        font-size: 12px;
-        padding: 1px 3px;
+        display: none !important;
+      }
+      
+      .snaptalk-message-bubble {
+        cursor: pointer;
+        padding-bottom: 14px !important;
+        transition: all 0.2s ease;
+      }
+      
+      .snaptalk-message-bubble:active {
+        transform: scale(0.98);
+        opacity: 0.9;
       }
       
       .snaptalk-chat {
