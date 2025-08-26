@@ -288,8 +288,10 @@ export async function createNewTopic(clientId, client, visitorId = null, request
     throw new Error(`Telegram settings not configured for client ${client?.client_name || clientId}`);
   }
 
+  // Create topic title with short unique ID
+  const shortId = Date.now().toString(36).slice(-6);
   const title = visitorId 
-    ? `Visitor ${visitorId.slice(0,8)} - ${client?.client_name || clientId}`
+    ? `Визит - ${shortId}`
     : `Client #${clientId} (${client?.client_name || 'Unknown'})`;
     
   const telegramUrl = `https://api.telegram.org/bot${botToken}/createForumTopic`;
