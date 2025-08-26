@@ -86,7 +86,7 @@ export function generateWidgetComponents() {
     /* Пузырь сообщения - Apple Glassmorphism полностью кликабельный */
     .snaptalk-message-bubble {
       position: relative;
-      max-width: 440px;
+      width: 440px;
       border-radius: 18px;
       padding: 14px 18px;
       background: rgba(255, 255, 255, 0.15);

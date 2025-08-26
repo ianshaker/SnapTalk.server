@@ -214,7 +214,8 @@ export function generateChatMessages() {
       }
       
       .snaptalk-message-bubble {
-        max-width: calc(100vw - 20px);
+        width: calc(100vw - 20px);
+        max-width: none;
       }
       
       .snaptalk-message-text {
