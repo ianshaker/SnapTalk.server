@@ -4,21 +4,14 @@ export function generateWidgetAnimations() {
   return `
     /* ===== SNAPTALK WIDGET ANIMATIONS ===== */
     
-    @keyframes snaptalk-elegant-entrance {
+    @keyframes snaptalk-smooth-show {
       0% {
         opacity: 0;
-        transform: scale(0.3) rotate(180deg);
-        filter: blur(10px);
-      }
-      50% {
-        opacity: 0.8;
-        transform: scale(1.05) rotate(10deg);
-        filter: blur(2px);
+        transform: scale(0.95);
       }
       100% {
         opacity: 1;
-        transform: scale(1) rotate(0deg);
-        filter: blur(0);
+        transform: scale(1);
       }
     }
     

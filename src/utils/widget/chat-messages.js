@@ -228,7 +228,7 @@ export function generateChatMessages() {
         background: rgba(255, 255, 255, 0.2);
         backdrop-filter: blur(25px);
         -webkit-backdrop-filter: blur(25px);
-        animation: snaptalk-elegant-entrance 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: snaptalk-smooth-show 0.3s ease-out;
       }
       
       .snaptalk-message {

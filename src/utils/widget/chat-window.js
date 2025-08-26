@@ -17,7 +17,7 @@ export function generateChatWindow() {
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       overflow: hidden;
-      animation: snaptalk-elegant-entrance 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: snaptalk-smooth-show 0.3s ease-out;
       display: flex;
       flex-direction: column;
       transform-origin: bottom right;
