@@ -87,7 +87,7 @@ async function dbGetTopic(clientId) {
   return data?.topic_id ?? null;
 }
 
-async function dbSaveTopic(clientId, topicId, visitorId = null, requestId = null) {
+async function dbSaveTopic(clientId, topicId, visitorId = null, requestId = null, url = null, meta = null) {
   if (!sb) { memoryMap.set(clientId, topicId); return; }
   
   const topicData = { 
@@ -95,9 +95,17 @@ async function dbSaveTopic(clientId, topicId, visitorId = null, requestId = null
     topic_id: topicId,
     visitor_id: visitorId,
     request_id: requestId,
+    page_url: url, // 🔥 СОХРАНЯЕМ URL!
+    page_title: meta?.title || null,
+    referrer: meta?.ref || null,
+    utm_source: meta?.utm?.source || null,
+    utm_medium: meta?.utm?.medium || null,
+    utm_campaign: meta?.utm?.campaign || null,
     fingerprint_data: visitorId ? { 
       visitorId, 
       requestId, 
+      url,
+      meta,
       timestamp: new Date().toISOString() 
     } : null
   };
@@ -109,7 +117,7 @@ async function dbSaveTopic(clientId, topicId, visitorId = null, requestId = null
 }
 
 // ===== Telegram helpers =====
-async function ensureTopic(clientId, client, visitorId = null, requestId = null) {
+async function ensureTopic(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
   let topicId = await dbGetTopic(clientId);
   if (topicId) return topicId;
 
@@ -130,13 +138,13 @@ async function ensureTopic(clientId, client, visitorId = null, requestId = null)
   if (!data?.ok) throw new Error('createForumTopic failed: ' + JSON.stringify(data));
   topicId = data.result.message_thread_id;
 
-  await dbSaveTopic(clientId, topicId, visitorId, requestId);
+  await dbSaveTopic(clientId, topicId, visitorId, requestId, url, meta);
   console.log(`✅ Created topic ${topicId} for client ${client?.client_name || clientId}${visitorId ? ` [Visitor: ${visitorId.slice(0,8)}...]` : ''}`);
   return topicId;
 }
 
-async function sendToTopic({ clientId, text, prefix = '', client, visitorId = null, requestId = null }) {
-  const topicId = await ensureTopic(clientId, client, visitorId, requestId);
+async function sendToTopic({ clientId, text, prefix = '', client, visitorId = null, requestId = null, url = null, meta = null }) {
+  const topicId = await ensureTopic(clientId, client, visitorId, requestId, url, meta);
 
   // Используем настройки клиента
   const botToken = client?.telegram_bot_token || BOT_TOKEN;
@@ -353,7 +361,9 @@ app.post('/api/visit/track', async (req, res) => {
       prefix: `👤 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`, 
       client, 
       visitorId, 
-      requestId 
+      requestId,
+      url,
+      meta
     });
 
     console.log(`👤 New visitor tracked: ${client.client_name} → ${url} [${visitorId.slice(0,8)}...]`);
