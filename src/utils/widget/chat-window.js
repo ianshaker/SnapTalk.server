@@ -53,7 +53,7 @@ export function generateChatWindow() {
     .snaptalk-input-area {
       display: flex;
       gap: 12px;
-      align-items: flex-end;
+      align-items: center; /* ЦЕНТРИРОВАНИЕ ПО ВЕРТИКАЛИ - исправлено */
       flex-shrink: 0;
       padding: 16px 0; /* Только отступы, без фона */
       background: transparent; /* Прозрачный фон */

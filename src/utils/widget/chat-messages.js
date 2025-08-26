@@ -83,17 +83,14 @@ export function generateChatMessages() {
       text-align: center;
     }
     
-    /* Поле ввода - Apple Glassmorphism */
+    /* Поле ввода - Чистый стиль БЕЗ blur */
     .snaptalk-input-area {
-      padding: 16px 20px 20px 20px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(15px);
-      -webkit-backdrop-filter: blur(15px);
+      padding: 16px 0; /* Только отступы */
+      background: transparent; /* Прозрачный фон */
       display: flex;
       gap: 12px;
-      align-items: flex-end;
-      border-radius: 0 0 24px 24px;
+      align-items: center; /* ЦЕНТРИРОВАНИЕ ПО ВЕРТИКАЛИ */
+      /* Убираем все blur эффекты, границы и скругления */
     }
     
     .snaptalk-input {
