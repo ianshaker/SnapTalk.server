@@ -149,8 +149,8 @@ export function generateWidgetComponents() {
     /* Индикатор онлайн-статуса */
     .snaptalk-online-indicator {
       position: absolute;
-      bottom: -6px;
-      right: -6px;
+      bottom: -3px;
+      right: -3px;
       width: 12px;
       height: 12px;
       background: #00C851;
