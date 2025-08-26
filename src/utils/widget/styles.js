@@ -104,12 +104,12 @@ export function generateWidgetStyles(colorConfig, position) {
       transition: all var(--snaptalk-transition-fast);
     }
     
-    /* Контейнер приветствия - современный стиль */
+    /* Контейнер приветствия - современный стиль с увеличенной шириной */
     .snaptalk-greeting {
       position: relative;
       margin-bottom: 1.5rem;
       animation: snaptalk-elegant-slide-in 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-      max-width: 380px;
+      max-width: 520px;
       transform-origin: bottom right;
       transition: all var(--snaptalk-transition-normal);
     }
@@ -145,7 +145,7 @@ export function generateWidgetStyles(colorConfig, position) {
     }
     
     .snaptalk-message-content.snaptalk-wide-bubble .snaptalk-message-bubble {
-      max-width: 360px;
+      max-width: 480px;
       flex: 1;
     }
     
@@ -187,10 +187,10 @@ export function generateWidgetStyles(colorConfig, position) {
       z-index: 1;
     }
     
-    /* Пузырь сообщения - Apple Glassmorphism с адаптивной шириной */
+    /* Пузырь сообщения - Apple Glassmorphism с увеличенной шириной */
     .snaptalk-message-bubble {
       position: relative;
-      max-width: 350px;
+      max-width: 420px;
       border-radius: 18px 18px 18px 4px;
       padding: 14px 18px 16px 18px;
       background: rgba(255, 255, 255, 0.15);
@@ -203,10 +203,10 @@ export function generateWidgetStyles(colorConfig, position) {
       flex: 1;
     }
     
-    /* Когда кнопка "Ответить" скрыта - пузырь может быть шире */
+    /* Когда кнопка "Ответить" скрыта - пузырь может быть еще шире */
     .snaptalk-reply-btn.snaptalk-hidden + .snaptalk-message-bubble,
     .snaptalk-message-content:has(.snaptalk-reply-btn.snaptalk-hidden) .snaptalk-message-bubble {
-      max-width: 320px;
+      max-width: 450px;
     }
     
     /* Хвостик сообщения - стиль Telegram */
