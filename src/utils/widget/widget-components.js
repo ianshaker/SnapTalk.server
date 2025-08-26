@@ -4,53 +4,7 @@ export function generateWidgetComponents() {
   return `
     /* ===== SNAPTALK WIDGET COMPONENTS ===== */
     
-    /* Кнопка минимизации - современный стиль с glassmorphism */
-    .snaptalk-btn { 
-      background: var(--snaptalk-gradient); 
-      color: white; 
-      border: none; 
-      border-radius: var(--snaptalk-radius-full); 
-      width: 60px; 
-      height: 60px; 
-      cursor: pointer; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      box-shadow: var(--snaptalk-shadow-soft); 
-      transition: all var(--snaptalk-transition-normal); 
-      animation: snaptalk-elegant-entrance 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      backdrop-filter: blur(10px);
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .snaptalk-btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
-      border-radius: inherit;
-      transition: opacity var(--snaptalk-transition-fast);
-      opacity: 0;
-    }
-    
-    .snaptalk-btn:hover { 
-      background: var(--snaptalk-hover-gradient);
-      transform: scale(1.08) translateY(-3px); 
-      box-shadow: var(--snaptalk-shadow-premium); 
-    }
-    
-    .snaptalk-btn:hover::before {
-      opacity: 1;
-    }
-    
-    .snaptalk-btn:active {
-      transform: scale(1.02) translateY(-1px);
-      transition: all var(--snaptalk-transition-fast);
-    }
+
     
     /* Контейнер приветствия - современный стиль с увеличенной шириной */
     .snaptalk-greeting {

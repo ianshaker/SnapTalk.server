@@ -81,7 +81,6 @@ export function generateWidgetCore() {
     }
     
     bindEvents() {
-      document.getElementById('snaptalk-toggle').addEventListener('click', () => this.toggleWidget());
       document.getElementById('snaptalk-reply').addEventListener('click', () => this.openChat());
       
       // Весь пузырь кликабельный на всех устройствах

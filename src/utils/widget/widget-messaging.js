@@ -9,8 +9,7 @@ export function generateWidgetMessaging() {
       const greetingEl = document.getElementById('snaptalk-greeting');
       greetingEl.classList.add('snaptalk-hidden');
       
-      // Показываем чат и скрываем кружок
-      document.getElementById('snaptalk-toggle').classList.add('snaptalk-hidden');
+      // Показываем чат
       document.getElementById('snaptalk-chat').classList.remove('snaptalk-hidden');
       
       // Подключаемся к WebSocket
@@ -31,9 +30,8 @@ export function generateWidgetMessaging() {
     closeChat() {
       this.isOpen = false;
       
-      // Скрываем чат и показываем кружок
+      // Скрываем чат
       document.getElementById('snaptalk-chat').classList.add('snaptalk-hidden');
-      document.getElementById('snaptalk-toggle').classList.remove('snaptalk-hidden');
       
       // Показываем приветствие снова
       const greetingEl = document.getElementById('snaptalk-greeting');
