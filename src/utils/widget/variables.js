@@ -53,7 +53,7 @@ export function generateWidgetVariables(colorConfig, position) {
       font-size: 16px; 
       line-height: 1.5; 
       transition: all var(--snaptalk-transition-normal);
-      max-width: 520px;
+      max-width: 580px;
       width: auto;
     }
     

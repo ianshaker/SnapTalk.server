@@ -57,7 +57,7 @@ export function generateWidgetComponents() {
       position: relative;
       margin-bottom: 1.5rem;
       animation: snaptalk-elegant-slide-in 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-      max-width: 520px;
+      max-width: 580px;
       transform-origin: bottom right;
       transition: all var(--snaptalk-transition-normal);
     }
@@ -78,7 +78,7 @@ export function generateWidgetComponents() {
     
     /* Специальный класс для широкого пузыря когда кнопка скрыта */
     .snaptalk-message-content.snaptalk-wide-bubble .snaptalk-message-bubble {
-      max-width: 480px;
+      max-width: 540px;
     }
     
 
@@ -86,7 +86,7 @@ export function generateWidgetComponents() {
     /* Пузырь сообщения - Apple Glassmorphism с кнопкой внутри */
     .snaptalk-message-bubble {
       position: relative;
-      max-width: 420px;
+      max-width: 480px;
       border-radius: 18px;
       padding: 14px 18px;
       background: rgba(255, 255, 255, 0.15);
