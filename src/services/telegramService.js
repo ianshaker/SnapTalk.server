@@ -201,6 +201,60 @@ export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId
   }
 }
 
+// ===== Site Visits Tracking =====
+// 🆕 Функция для записи каждого визита в таблицу site_visits
+export async function saveSiteVisit(clientId, visitorId, requestId, url, meta, userAgent = null, ipAddress = null) {
+  if (!sb) {
+    console.log('⚠️ Supabase not available - skipping site_visits tracking');
+    return;
+  }
+
+  try {
+    const siteVisitData = {
+      client_id: clientId,
+      visitor_id: visitorId,
+      request_id: requestId,
+      page_url: url,
+      page_title: meta?.title || null,
+      referrer: meta?.ref || null,
+      user_agent: userAgent,
+      ip_address: ipAddress,
+      utm_source: meta?.utm?.source || null,
+      utm_medium: meta?.utm?.medium || null,
+      utm_campaign: meta?.utm?.campaign || null,
+      utm_term: meta?.utm?.term || null,
+      utm_content: meta?.utm?.content || null,
+      session_id: meta?.sessionId || null,
+      fingerprint_data: {
+        visitorId,
+        requestId,
+        url,
+        meta,
+        timestamp: new Date().toISOString(),
+        userAgent,
+        ipAddress
+      },
+      visit_timestamp: new Date().toISOString()
+    };
+
+    console.log(`📊 Saving site visit: ${visitorId.slice(0,8)}... → ${url}`);
+    
+    const { data, error } = await sb
+      .from('site_visits')
+      .insert(siteVisitData)
+      .select();
+
+    if (error) {
+      console.error('❌ saveSiteVisit error:', error);
+      console.error('❌ Failed siteVisitData:', siteVisitData);
+    } else {
+      console.log(`✅ Site visit saved: ${data[0]?.id || 'unknown'} [${visitorId.slice(0,8)}...]`);
+    }
+  } catch (error) {
+    console.error('❌ saveSiteVisit error:', error);
+  }
+}
+
 // ===== Telegram helpers =====
 // 🆕 Умная функция обеспечения топика для посетителя
 export async function ensureTopicForVisitor(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
