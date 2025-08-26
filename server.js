@@ -87,6 +87,48 @@ async function dbGetTopic(clientId) {
   return data?.topic_id ?? null;
 }
 
+// 🆕 Поиск существующего посетителя по visitor_id
+async function findExistingVisitor(clientId, visitorId) {
+  if (!sb || !visitorId) return null;
+  
+  try {
+    const { data, error } = await sb
+      .from('client_topics')
+      .select('topic_id, visitor_id, created_at, page_url')
+      .eq('client_id', clientId)
+      .eq('visitor_id', visitorId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('❌ findExistingVisitor error:', error);
+      return null;
+    }
+    
+    return data; // { topic_id, visitor_id, created_at, page_url } или null
+  } catch (error) {
+    console.error('❌ findExistingVisitor error:', error);
+    return null;
+  }
+}
+
+// 🆕 Проверка валидности топика в Telegram
+async function isTopicValidInTelegram(botToken, groupId, topicId) {
+  try {
+    const telegramCheckUrl = `https://api.telegram.org/bot${botToken}/getForumTopicIconStickers`;
+    const { data } = await axios.post(telegramCheckUrl, {
+      chat_id: groupId,
+      message_thread_id: topicId
+    });
+    
+    // Если топик существует, API вернет ok: true
+    return data?.ok === true;
+  } catch (error) {
+    // Если топик не существует или удален - API вернет ошибку
+    console.warn(`⚠️ Topic ${topicId} not valid in Telegram:`, error.response?.data?.description || error.message);
+    return false;
+  }
+}
+
 async function dbSaveTopic(clientId, topicId, visitorId = null, requestId = null, url = null, meta = null) {
   if (!sb) { memoryMap.set(clientId, topicId); return; }
   
@@ -117,7 +159,53 @@ async function dbSaveTopic(clientId, topicId, visitorId = null, requestId = null
 }
 
 // ===== Telegram helpers =====
+// 🆕 Умная функция обеспечения топика для посетителя
+async function ensureTopicForVisitor(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
+  // 1️⃣ Если есть visitorId - ищем существующего посетителя
+  if (visitorId) {
+    console.log(`🔍 Checking for existing visitor: ${visitorId.slice(0,8)}...`);
+    
+    const existingVisitor = await findExistingVisitor(clientId, visitorId);
+    if (existingVisitor) {
+      console.log(`👤 Found existing visitor with topic: ${existingVisitor.topic_id}`);
+      
+      // 2️⃣ Проверяем валидность топика в Telegram
+      const botToken = client?.telegram_bot_token || BOT_TOKEN;
+      const groupId = client?.telegram_group_id || SUPERGROUP_ID;
+      
+      const isValidTopic = await isTopicValidInTelegram(botToken, groupId, existingVisitor.topic_id);
+      if (isValidTopic) {
+        console.log(`✅ Topic ${existingVisitor.topic_id} is valid - reusing for visitor`);
+        
+        // 3️⃣ Обновляем информацию о последнем визите  
+        await dbSaveTopic(clientId, existingVisitor.topic_id, visitorId, requestId, url, meta);
+        return {
+          topicId: existingVisitor.topic_id,
+          isExistingVisitor: true,
+          previousUrl: existingVisitor.page_url,
+          firstVisit: existingVisitor.created_at
+        };
+      } else {
+        console.log(`❌ Topic ${existingVisitor.topic_id} is invalid - creating new topic`);
+      }
+    }
+  }
+  
+  // 4️⃣ Создаем новый топик (для новых посетителей или если старый топик недействителен)
+  return await createNewTopic(clientId, client, visitorId, requestId, url, meta);
+}
+
+// 🔄 Старая функция ensureTopic - теперь только для обратной совместимости
 async function ensureTopic(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
+  // Используем новую умную логику
+  const result = await ensureTopicForVisitor(clientId, client, visitorId, requestId, url, meta);
+  return typeof result === 'object' ? result.topicId : result;
+}
+
+// 🆕 Вынесенная логика создания нового топика
+async function createNewTopic(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
+  console.log(`🆕 Creating new topic for client: ${client?.client_name || clientId}`);
+  
   let topicId = await dbGetTopic(clientId);
   if (topicId) return topicId;
 
@@ -129,7 +217,10 @@ async function ensureTopic(clientId, client, visitorId = null, requestId = null,
     throw new Error(`Telegram settings not configured for client ${client?.client_name || clientId}`);
   }
 
-  const title = `Client #${clientId} (${client?.client_name || 'Unknown'})`;
+  const title = visitorId 
+    ? `Visitor ${visitorId.slice(0,8)} - ${client?.client_name || clientId}`
+    : `Client #${clientId} (${client?.client_name || 'Unknown'})`;
+    
   const telegramUrl = `https://api.telegram.org/bot${botToken}/createForumTopic`;
   const { data } = await axios.post(telegramUrl, {
     chat_id: groupId,
@@ -140,11 +231,16 @@ async function ensureTopic(clientId, client, visitorId = null, requestId = null,
 
   await dbSaveTopic(clientId, topicId, visitorId, requestId, url, meta);
   console.log(`✅ Created topic ${topicId} for client ${client?.client_name || clientId}${visitorId ? ` [Visitor: ${visitorId.slice(0,8)}...]` : ''}`);
-  return topicId;
+  
+  return {
+    topicId,
+    isExistingVisitor: false
+  };
 }
 
 async function sendToTopic({ clientId, text, prefix = '', client, visitorId = null, requestId = null, url = null, meta = null }) {
-  const topicId = await ensureTopic(clientId, client, visitorId, requestId, url, meta);
+  const result = await ensureTopicForVisitor(clientId, client, visitorId, requestId, url, meta);
+  const topicId = typeof result === 'object' ? result.topicId : result;
 
   // Используем настройки клиента
   const botToken = client?.telegram_bot_token || BOT_TOKEN;
@@ -353,20 +449,26 @@ app.post('/api/visit/track', async (req, res) => {
     // Сохраняем визит в базу данных
     await saveVisitToDatabase(clientId, visitorId, requestId, url, meta);
 
-    // Создаем топик и отправляем уведомление в Telegram
-    const message = formatVisitMessage(client, visitorId, url, meta);
-    await sendToTopic({ 
-      clientId, 
-      text: message, 
-      prefix: `👤 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`, 
-      client, 
-      visitorId, 
-      requestId,
-      url,
-      meta
-    });
+    // Создаем/находим топик и отправляем уведомление в Telegram  
+    const topicResult = await ensureTopicForVisitor(clientId, client, visitorId, requestId, url, meta);
+    const { topicId, isExistingVisitor, previousUrl, firstVisit } = 
+      typeof topicResult === 'object' ? topicResult : { topicId: topicResult, isExistingVisitor: false };
+    
+    // Формируем сообщение в зависимости от статуса посетителя
+    let message, prefix;
+    if (isExistingVisitor) {
+      message = formatReturnVisitMessage(client, visitorId, url, meta, previousUrl, firstVisit);
+      prefix = `🔄 ПОВТОРНЫЙ ВИЗИТ\n\n`;
+    } else {
+      message = formatVisitMessage(client, visitorId, url, meta);
+      prefix = `👤 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`;
+    }
+    
+    // Отправляем в уже подготовленный топик
+    await sendTelegramMessage(topicId, message, prefix, client);
 
-    console.log(`👤 New visitor tracked: ${client.client_name} → ${url} [${visitorId.slice(0,8)}...]`);
+    const statusText = isExistingVisitor ? 'Return visitor' : 'New visitor';
+    console.log(`👤 ${statusText} tracked: ${client.client_name} → ${url} [${visitorId.slice(0,8)}...] Topic: ${topicId}`);
     return res.json({ ok: true });
 
   } catch (e) {
@@ -570,6 +672,72 @@ function formatVisitMessage(client, visitorId, url, meta) {
   message += `\n⏰ ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}`;
   
   return message;
+}
+
+// 🆕 Формат сообщения для повторного визита
+function formatReturnVisitMessage(client, visitorId, url, meta, previousUrl, firstVisit) {
+  const domain = new URL(url).hostname;
+  const shortVisitorId = visitorId.slice(0, 8) + '...';
+  
+  let message = `🌐 Страница: ${url}\n`;
+  message += `👤 Visitor ID: ${shortVisitorId}\n`;
+  message += `🏠 Домен: ${domain}\n`;
+  
+  if (meta?.title) {
+    message += `📄 Заголовок: ${meta.title}\n`;
+  }
+  
+  if (previousUrl) {
+    message += `📋 Предыдущая страница: ${previousUrl}\n`;
+  }
+  
+  if (meta?.ref) {
+    message += `🔗 Откуда пришел: ${meta.ref}\n`;
+  }
+  
+  if (meta?.utm?.source) {
+    message += `📊 UTM: ${meta.utm.source}`;
+    if (meta.utm.medium) message += ` / ${meta.utm.medium}`;
+    if (meta.utm.campaign) message += ` / ${meta.utm.campaign}`;
+    message += `\n`;
+  }
+  
+  const firstVisitTime = firstVisit ? new Date(firstVisit).toLocaleString('ru-RU', { 
+    timeZone: 'Europe/Moscow',
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit', 
+    minute: '2-digit'
+  }) : 'Неизвестно';
+  
+  message += `\n⏰ Сейчас: ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}`;
+  message += `\n🕒 Первый визит: ${firstVisitTime}`;
+  
+  return message;
+}
+
+// 🆕 Прямая отправка сообщения в Telegram (без создания топика)
+async function sendTelegramMessage(topicId, message, prefix, client) {
+  const botToken = client?.telegram_bot_token || BOT_TOKEN;
+  const groupId = client?.telegram_group_id || SUPERGROUP_ID;
+  
+  const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  const fullMessage = `${prefix}${message}`.slice(0, 4096);
+  
+  const payload = {
+    chat_id: groupId,
+    message_thread_id: topicId,
+    text: fullMessage,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true
+  };
+  
+  console.log(`📤 Sending to Telegram topic ${topicId}: ${botToken.slice(0,10)}...`);
+  const { data } = await axios.post(telegramApiUrl, payload);
+  if (!data?.ok) throw new Error('sendMessage failed: ' + JSON.stringify(data));
+  console.log(`✅ Message sent to Telegram topic ${topicId}`);
+  return data.result;
 }
 
 function pushToClient(clientId, payload) {
