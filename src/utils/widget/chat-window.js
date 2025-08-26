@@ -125,6 +125,10 @@ export function generateChatWindow() {
       transition: all 0.2s ease;
       font-family: inherit;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* Легкая тень */
+      height: 52px; /* ФИКСИРОВАННАЯ высота для точного расчета */
+      line-height: 1.2; /* Контроль высоты строки */
+      min-height: 52px; /* Минимальная высота */
+      max-height: 52px; /* Максимальная высота - не растягивается */
     }
     
     .snaptalk-input-field:focus {
@@ -141,7 +145,7 @@ export function generateChatWindow() {
     .snaptalk-send-button {
       position: absolute; /* АБСОЛЮТНОЕ позиционирование */
       right: 6px; /* Отступ от правого края */
-      top: 7px; /* ТОЧНОЕ ЦЕНТРИРОВАНИЕ - калибровка */
+      top: 6px; /* МАТЕМАТИЧЕСКИЙ ЦЕНТР: (52px - 40px) / 2 = 6px */
       width: 40px; /* Немного меньше для input */
       height: 40px;
       background: var(--snaptalk-primary);
