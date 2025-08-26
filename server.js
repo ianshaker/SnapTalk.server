@@ -320,6 +320,51 @@ app.get('/', (req, res) => {
   });
 });
 
+// ===== API: Автоматический трекинг визитов =====
+app.post('/api/visit/track', async (req, res) => {
+  try {
+    const { clientId, apiKey, visitorId, requestId, url, meta } = req.body || {};
+    
+    if (!clientId || !visitorId || !url) {
+      return res.status(400).json({ ok: false, error: 'clientId, visitorId and url required' });
+    }
+
+    // Находим клиента по API ключу
+    const client = await findClientByApiKey(apiKey);
+    if (!client) {
+      console.log(`❌ Client not found for apiKey: ${apiKey}`);
+      return res.status(404).json({ ok: false, error: 'Client not found' });
+    }
+
+    // Проверяем - не дублируется ли визит (в течение 30 минут)
+    const recentVisit = await checkRecentVisit(clientId, visitorId, url);
+    if (recentVisit) {
+      return res.json({ ok: true, message: 'Visit already tracked recently' });
+    }
+
+    // Сохраняем визит в базу данных
+    await saveVisitToDatabase(clientId, visitorId, requestId, url, meta);
+
+    // Создаем топик и отправляем уведомление в Telegram
+    const message = formatVisitMessage(client, visitorId, url, meta);
+    await sendToTopic({ 
+      clientId, 
+      text: message, 
+      prefix: `👤 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`, 
+      client, 
+      visitorId, 
+      requestId 
+    });
+
+    console.log(`👤 New visitor tracked: ${client.client_name} → ${url} [${visitorId.slice(0,8)}...]`);
+    return res.json({ ok: true });
+
+  } catch (e) {
+    console.error('Visit tracking error:', e);
+    return res.status(500).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
 // ===== API: сайт -> Telegram =====
 app.post('/api/chat/send', async (req, res) => {
   try {
@@ -439,6 +484,83 @@ wss.on('connection', (ws, req) => {
     try { ws.close(); } catch {}
   }
 });
+
+// ===== Вспомогательные функции для трекинга визитов =====
+async function checkRecentVisit(clientId, visitorId, url) {
+  if (!sb) return false; // В memory mode не проверяем дубли
+  
+  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  
+  const { data, error } = await sb
+    .from('site_visits')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('visitor_id', visitorId)
+    .eq('page_url', url)
+    .gte('visited_at', thirtyMinutesAgo)
+    .maybeSingle();
+    
+  if (error && !error.message.includes('does not exist')) {
+    console.error('checkRecentVisit error:', error);
+  }
+  
+  return !!data;
+}
+
+async function saveVisitToDatabase(clientId, visitorId, requestId, url, meta) {
+  if (!sb) return; // В memory mode не сохраняем
+  
+  const visitData = {
+    client_id: clientId,
+    visitor_id: visitorId,
+    request_id: requestId,
+    page_url: url,
+    page_title: meta?.title || '',
+    referrer: meta?.ref || '',
+    user_agent: meta?.userAgent || '',
+    utm_source: meta?.utm?.source || null,
+    utm_medium: meta?.utm?.medium || null,
+    utm_campaign: meta?.utm?.campaign || null,
+    visited_at: new Date().toISOString(),
+    meta_data: meta || {}
+  };
+  
+  const { error } = await sb
+    .from('site_visits')
+    .insert(visitData);
+    
+  if (error) {
+    console.error('saveVisitToDatabase error:', error);
+  }
+}
+
+function formatVisitMessage(client, visitorId, url, meta) {
+  const domain = new URL(url).hostname;
+  const shortVisitorId = visitorId.slice(0, 8) + '...';
+  
+  let message = `🌐 Страница: ${url}\n`;
+  message += `👤 Visitor ID: ${shortVisitorId}\n`;
+  message += `🏠 Домен: ${domain}\n`;
+  
+  if (meta?.title) {
+    message += `📄 Заголовок: ${meta.title}\n`;
+  }
+  
+  if (meta?.ref) {
+    message += `🔗 Откуда пришел: ${meta.ref}\n`;
+  }
+  
+  if (meta?.utm?.source) {
+    message += `📊 UTM: ${meta.utm.source}`;
+    if (meta.utm.medium) message += ` / ${meta.utm.medium}`;
+    if (meta.utm.campaign) message += ` / ${meta.utm.campaign}`;
+    message += `\n`;
+  }
+  
+  message += `\n⏰ ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}`;
+  
+  return message;
+}
 
 function pushToClient(clientId, payload) {
   const set = hub.get(clientId);

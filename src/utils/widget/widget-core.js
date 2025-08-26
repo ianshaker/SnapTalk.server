@@ -123,6 +123,9 @@ export function generateWidgetCore() {
             this.visitorId = result.visitorId;
             this.requestId = result.requestId;
             console.log('📌 SnapTalk FingerprintJS initialized:', result.visitorId);
+            
+            // 🔥 АВТОМАТИЧЕСКИЙ ТРЕКИНГ ВИЗИТА
+            this.trackVisit();
           })
           .catch(error => {
             console.warn('⚠️ FingerprintJS failed to initialize:', error);
@@ -130,6 +133,58 @@ export function generateWidgetCore() {
       } catch (error) {
         console.warn('⚠️ FingerprintJS import failed:', error);
       }
+    }
+    
+    // Автоматический трекинг визита пользователя
+    async trackVisit() {
+      if (!this.visitorId) {
+        console.warn('⚠️ Cannot track visit: visitorId not available');
+        return;
+      }
+      
+      try {
+        const meta = {
+          title: document.title,
+          ref: document.referrer,
+          url: window.location.href,
+          userAgent: navigator.userAgent,
+          utm: this.extractUTMParams()
+        };
+        
+        const response = await fetch(SERVER_URL + '/api/visit/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: CLIENT_ID,
+            apiKey: API_KEY,
+            visitorId: this.visitorId,
+            requestId: this.requestId,
+            url: window.location.href,
+            meta: meta
+          })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('👤 Visit tracked successfully:', result);
+        } else {
+          console.warn('⚠️ Visit tracking failed:', response.status);
+        }
+      } catch (error) {
+        console.warn('⚠️ Visit tracking error:', error);
+      }
+    }
+    
+    // Извлечение UTM параметров из URL
+    extractUTMParams() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return {
+        source: urlParams.get('utm_source'),
+        medium: urlParams.get('utm_medium'),
+        campaign: urlParams.get('utm_campaign'),
+        term: urlParams.get('utm_term'),
+        content: urlParams.get('utm_content')
+      };
     }
   `;
 }
