@@ -50,7 +50,7 @@ export async function dbGetTopic(clientId) {
   return data?.topic_id ?? null;
 }
 
-// 🆕 Поиск существующего посетителя по visitor_id
+// 🆕 Поиск существующего посетителя по visitor_id (БЕЗ client_id!)
 export async function findExistingVisitor(clientId, visitorId) {
   if (!sb || !visitorId) {
     console.log(`❌ findExistingVisitor: No Supabase connection or visitorId`);
@@ -58,13 +58,12 @@ export async function findExistingVisitor(clientId, visitorId) {
   }
   
   try {
-    console.log(`🔍 Searching for existing visitor ${visitorId.slice(0,8)}... in client_topics for client ${clientId}`);
+    console.log(`🔍 Searching for existing visitor ${visitorId.slice(0,8)}... in client_topics (ANY client)`);
     
     const { data, error } = await sb
       .from('client_topics')
-      .select('topic_id, visitor_id, created_at, page_url')
-      .eq('client_id', clientId)
-      .eq('visitor_id', visitorId)
+      .select('topic_id, visitor_id, created_at, page_url, client_id')
+      .eq('visitor_id', visitorId)  // 🔥 ТОЛЬКО по visitor_id! НЕ фильтруем по client_id!
       .maybeSingle();
     
     if (error) {
@@ -73,12 +72,12 @@ export async function findExistingVisitor(clientId, visitorId) {
     }
     
     if (data) {
-      console.log(`✅ Found existing visitor: topic_id=${data.topic_id}, created_at=${data.created_at}`);
+      console.log(`✅ Found existing visitor: topic_id=${data.topic_id}, original_client_id=${data.client_id}, created_at=${data.created_at}`);
     } else {
-      console.log(`❌ No existing visitor found for ${visitorId.slice(0,8)}... in client ${clientId}`);
+      console.log(`❌ No existing visitor found for ${visitorId.slice(0,8)}... (first visit ever)`);
     }
     
-    return data; // { topic_id, visitor_id, created_at, page_url } или null
+    return data; // { topic_id, visitor_id, created_at, page_url, client_id } или null
   } catch (error) {
     console.error('❌ findExistingVisitor error:', error);
     return null;
@@ -131,27 +130,41 @@ export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId
   // 🔄 ИСПРАВЛЕНИЕ: используем visitor_id для уникальности записей!
   try {
     if (visitorId) {
-      // Для посетителей с visitor_id - сначала проверяем существование
+      // Для посетителей с visitor_id - ищем по visitor_id (БЕЗ client_id!)
+      console.log(`🔍 dbSaveTopic: Checking if visitor ${visitorId.slice(0,8)}... already exists`);
       const existing = await sb
         .from('client_topics')
-        .select('id')
-        .eq('client_id', clientId)
-        .eq('visitor_id', visitorId)
+        .select('id, client_id, topic_id')
+        .eq('visitor_id', visitorId)  // 🔥 ТОЛЬКО по visitor_id!
         .maybeSingle();
       
       if (existing.data) {
-        // Обновляем существующую запись
-        console.log(`🔄 Updating existing record for visitor ${visitorId.slice(0,8)}... in client_topics`);
+        // Обновляем существующую запись (НЕ меняем client_id и topic_id!)
+        console.log(`🔄 Updating existing visitor ${visitorId.slice(0,8)}... - keeping original client_id: ${existing.data.client_id}, topic_id: ${existing.data.topic_id}`);
+        
+        // Обновляем только метаданные, НЕ трогаем client_id и topic_id
+        const updateData = {
+          page_url: url,
+          page_title: topicData.page_title,
+          referrer: topicData.referrer,
+          utm_source: topicData.utm_source,
+          utm_medium: topicData.utm_medium,
+          utm_campaign: topicData.utm_campaign,
+          updated_at: topicData.updated_at,
+          fingerprint_data: topicData.fingerprint_data
+          // НЕ обновляем: client_id, topic_id (оставляем оригинальные!)
+        };
+        
         const { data, error } = await sb
           .from('client_topics')
-          .update(topicData)
+          .update(updateData)
           .eq('id', existing.data.id)
           .select();
         
         if (error) {
           console.error('❌ dbSaveTopic update error:', error);
         } else {
-          console.log(`✅ dbSaveTopic update success:`, data);
+          console.log(`✅ dbSaveTopic update success - preserved original topic_id: ${existing.data.topic_id}`);
         }
       } else {
         // Создаем новую запись
@@ -240,7 +253,8 @@ export async function ensureTopicForVisitor(clientId, client, visitorId = null, 
           topicId: existingVisitor.topic_id,
           isExistingVisitor: true,
           previousUrl: existingVisitor.page_url,
-          firstVisit: existingVisitor.created_at
+          firstVisit: existingVisitor.created_at,
+          originalClientId: existingVisitor.client_id  // 🔥 Оригинальный client_id
         };
       } else {
         console.log(`❌ Topic ${existingVisitor.topic_id} is invalid - creating new topic`);
