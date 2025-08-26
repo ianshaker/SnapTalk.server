@@ -149,15 +149,15 @@ export function generateWidgetComponents() {
     /* Индикатор онлайн-статуса */
     .snaptalk-online-indicator {
       position: absolute;
-      bottom: 2px;
-      right: 2px;
+      bottom: -6px;
+      right: -6px;
       width: 12px;
       height: 12px;
       background: #00C851;
       border-radius: 50%;
       border: 2px solid white;
       animation: snaptalk-pulse-online 2s infinite;
-      z-index: 4;
+      z-index: 5;
     }
     
     /* Корректировка padding текста когда есть мини-аватар */
