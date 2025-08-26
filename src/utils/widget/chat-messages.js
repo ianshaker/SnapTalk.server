@@ -222,20 +222,7 @@ export function generateChatMessages() {
         line-height: 1.4;
       }
       
-      .snaptalk-reply-btn {
-        display: none !important;
-      }
-      
-      .snaptalk-message-bubble {
-        cursor: pointer;
-        padding-bottom: 14px !important;
-        transition: all 0.2s ease;
-      }
-      
-      .snaptalk-message-bubble:active {
-        transform: scale(0.98);
-        opacity: 0.9;
-      }
+
       
       .snaptalk-chat {
         width: calc(100vw - 1rem);

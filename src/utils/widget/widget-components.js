@@ -83,7 +83,7 @@ export function generateWidgetComponents() {
     
 
     
-    /* Пузырь сообщения - Apple Glassmorphism с кнопкой внутри */
+    /* Пузырь сообщения - Apple Glassmorphism полностью кликабельный */
     .snaptalk-message-bubble {
       position: relative;
       max-width: 440px;
@@ -97,12 +97,18 @@ export function generateWidgetComponents() {
       animation: snaptalk-bubble-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
       transition: all var(--snaptalk-transition-normal);
       flex: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      min-height: 60px;
     }
     
-    /* Когда кнопка внутри пузыря, добавляем padding снизу для неё */
-    .snaptalk-message-bubble:has(.snaptalk-reply-btn:not(.snaptalk-hidden)) {
-      padding-bottom: 20px;
+    .snaptalk-message-bubble:active {
+      transform: scale(0.98);
+      opacity: 0.9;
     }
+    
+
     
     /* Мини-аватар внутри пузыря сообщения - правый центр */
     .snaptalk-bubble-avatar {
@@ -156,22 +162,9 @@ export function generateWidgetComponents() {
       font-weight: 400;
     }
     
-    /* Кнопка "Ответить" - в правом нижнем углу пузыря */
+    /* Кнопка "Ответить" - скрыта на всех устройствах */
     .snaptalk-reply-btn {
-      position: absolute;
-      bottom: 2px;
-      right: 12px;
-      background: transparent;
-      color: var(--snaptalk-primary);
-      border: none;
-      padding: 2px 4px;
-      border-radius: var(--snaptalk-radius-sm);
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all var(--snaptalk-transition-normal);
-      animation: snaptalk-elegant-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.3s both;
-      display: inline-flex;
+      display: none;
       align-items: center;
       gap: 4px;
       letter-spacing: 0.02em;
