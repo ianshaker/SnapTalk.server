@@ -64,6 +64,20 @@ export function createHoverGradient(primaryColor, secondaryColor) {
 }
 
 /**
+ * Конвертирует hex цвет в RGB значения
+ * @param {string} hex - Hex цвет
+ * @returns {string} RGB значения в формате "r, g, b"
+ */
+export function hexToRgb(hex) {
+  if (!hex || !hex.startsWith('#')) return '112, 179, 71'; // fallback
+  
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result 
+    ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+    : '112, 179, 71';
+}
+
+/**
  * Создает конфигурацию цветов для виджета
  * @param {string} primaryColor - Основной цвет
  * @param {string} secondaryColor - Вторичный цвет (опционально)
@@ -76,6 +90,8 @@ export function createWidgetColorConfig(primaryColor, secondaryColor) {
   return {
     primary: primary,
     secondary: secondary,
+    primaryRgb: hexToRgb(primary),
+    secondaryRgb: hexToRgb(secondary),
     gradient: createGradient(primary, secondary),
     hoverGradient: createHoverGradient(primary, secondary),
     darkened: darkenColor(primary, 20)

@@ -8,6 +8,8 @@ export function generateWidgetStyles(colorConfig, position) {
     :root {
       --snaptalk-primary: ${colorConfig.primary};
       --snaptalk-secondary: ${colorConfig.secondary};
+      --snaptalk-primary-rgb: ${colorConfig.primaryRgb};
+      --snaptalk-secondary-rgb: ${colorConfig.secondaryRgb};
       --snaptalk-gradient: ${colorConfig.gradient};
       --snaptalk-hover-gradient: ${colorConfig.hoverGradient};
       --snaptalk-primary-hover: ${colorConfig.darkened};
@@ -184,18 +186,17 @@ export function generateWidgetStyles(colorConfig, position) {
       z-index: 1;
     }
     
-    /* Пузырь сообщения - стиль Apple Messages */
+    /* Пузырь сообщения - Apple Glassmorphism */
     .snaptalk-message-bubble {
       position: relative;
       max-width: 290px;
       border-radius: 18px 18px 18px 4px;
       padding: 14px 18px 16px 18px;
-      background: linear-gradient(135deg, 
-        rgba(255, 255, 255, 0.95) 0%, 
-        rgba(248, 250, 252, 0.95) 100%);
-      border: 1px solid var(--snaptalk-border-light);
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       box-shadow: var(--snaptalk-shadow-message);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
       animation: snaptalk-bubble-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
       transition: all var(--snaptalk-transition-normal);
     }
