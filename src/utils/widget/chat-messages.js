@@ -218,6 +218,10 @@ export function generateChatMessages() {
         max-width: none;
       }
       
+      .snaptalk-greeting-container {
+        justify-content: center;
+      }
+      
       .snaptalk-message-text {
         font-size: 13px;
         line-height: 1.4;
