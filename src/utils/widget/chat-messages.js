@@ -209,7 +209,9 @@ export function generateChatMessages() {
     @media (max-width: 480px) {
       .snaptalk-widget {
         bottom: 1rem;
-        right: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        right: auto;
         max-width: calc(100vw - 2rem);
       }
       
