@@ -1,6 +1,6 @@
 // ===== Главный генератор виджета SnapTalk =====
 
-import { generateWidgetStyles } from './styles/index.js';
+import { generateWidgetStyles } from './styles.js';
 import { generateChatStyles } from './chatStyles.js';
 import { generateCompleteHTML } from './templates.js';
 import { generateWidgetClass } from './SnapTalkWidget.js';
