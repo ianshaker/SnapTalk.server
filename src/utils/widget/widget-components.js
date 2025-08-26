@@ -158,7 +158,7 @@ export function generateWidgetComponents() {
       font-size: 14px;
       line-height: 1.5;
       color: var(--snaptalk-text);
-      margin: 0 0 12px 0;
+      margin: 0;
       font-weight: 400;
     }
     
