@@ -11,18 +11,13 @@ export function generateWidgetHTML(texts) {
     
     <!-- Приветственное сообщение -->
     <div class="snaptalk-greeting snaptalk-hidden" id="snaptalk-greeting">
-      <button class="snaptalk-close-btn" id="snaptalk-close-greeting" aria-label="Закрыть">
-        <svg class="snaptalk-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-      
       <div class="snaptalk-greeting-container">
         <div class="snaptalk-avatar" id="snaptalk-avatar"></div>
-        <div class="snaptalk-message-bubble">
-          <div class="snaptalk-message-tail"></div>
-          <p class="snaptalk-message-text" id="snaptalk-greeting-text"></p>
+        <div class="snaptalk-message-content">
+          <div class="snaptalk-message-bubble">
+            <div class="snaptalk-message-tail"></div>
+            <p class="snaptalk-message-text" id="snaptalk-greeting-text"></p>
+          </div>
           <button class="snaptalk-reply-btn snaptalk-hidden" id="snaptalk-reply">
             ✨ \${WIDGET_TEXTS.reply || 'Ответить'}
           </button>
@@ -38,11 +33,6 @@ export function generateChatHTML(texts) {
     <div class="snaptalk-chat snaptalk-hidden" id="snaptalk-chat">
       <!-- Заголовок чата -->
       <div class="snaptalk-chat-header">
-        <button class="snaptalk-back-btn" id="snaptalk-back" aria-label="Назад">
-          <svg class="snaptalk-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m15 18-6-6 6-6"/>
-          </svg>
-        </button>
         <div class="snaptalk-chat-avatar" id="snaptalk-chat-avatar"></div>
         <div class="snaptalk-chat-info">
           <h3>\${WIDGET_TEXTS.managerName || 'Поддержка'}</h3>

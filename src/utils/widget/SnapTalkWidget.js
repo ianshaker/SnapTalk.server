@@ -80,9 +80,7 @@ export function generateWidgetClass() {
     
     bindEvents() {
       document.getElementById('snaptalk-toggle').addEventListener('click', () => this.toggleWidget());
-      document.getElementById('snaptalk-close-greeting').addEventListener('click', () => this.hideGreeting());
       document.getElementById('snaptalk-reply').addEventListener('click', () => this.openChat());
-      document.getElementById('snaptalk-back').addEventListener('click', () => this.closeChat());
       document.getElementById('snaptalk-send').addEventListener('click', () => this.sendMessage());
       
       const input = document.getElementById('snaptalk-input');
@@ -166,25 +164,12 @@ export function generateWidgetClass() {
       typeChar();
     }
     
-    hideGreeting() {
-      const greetingEl = document.getElementById('snaptalk-greeting');
-      const toggleBtn = document.getElementById('snaptalk-toggle');
-      
-      greetingEl.style.animation = 'snaptalk-slide-up 0.3s ease reverse';
-      setTimeout(() => {
-        greetingEl.classList.add('snaptalk-hidden');
-        greetingEl.style.animation = '';
-        
-        // Показываем кружок только если чат НЕ открыт
-        if (!this.isOpen) {
-          toggleBtn.classList.remove('snaptalk-hidden');
-        }
-      }, 300);
-    }
+    // Метод hideGreeting удален - кнопки закрытия больше нет
     
     toggleWidget() {
       if (this.isOpen) {
-        this.closeChat();
+        // Закрытие чата больше не поддерживается
+        console.log('❌ Закрытие чата отключено');
       } else {
         this.openChat();
       }
@@ -269,7 +254,10 @@ export function generateWidgetClass() {
     
     openChat() {
       this.isOpen = true;
-      this.hideGreeting();
+      
+      // Скрываем приветствие
+      const greetingEl = document.getElementById('snaptalk-greeting');
+      greetingEl.classList.add('snaptalk-hidden');
       
       // Показываем чат и скрываем кружок
       document.getElementById('snaptalk-toggle').classList.add('snaptalk-hidden');
@@ -290,15 +278,7 @@ export function generateWidgetClass() {
       console.log('✅ Чат открыт');
     }
     
-    closeChat() {
-      this.isOpen = false;
-      
-      // Скрываем чат
-      document.getElementById('snaptalk-chat').classList.add('snaptalk-hidden');
-      document.getElementById('snaptalk-toggle').classList.remove('snaptalk-hidden');
-      
-      console.log('❌ Чат закрыт');
-    }
+    // Метод closeChat удален - закрытие чата больше не поддерживается
     
     addMessage(text, type) {
       const messagesContainer = document.getElementById('snaptalk-messages');

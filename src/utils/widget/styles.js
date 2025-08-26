@@ -113,32 +113,7 @@ export function generateWidgetStyles(colorConfig, position) {
       transform-origin: bottom right;
     }
     
-    /* Кнопка закрытия */
-    .snaptalk-close-btn {
-      position: absolute;
-      top: -8px;
-      right: -8px;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: #ef4444;
-      border: 2px solid white;
-      color: white;
-      font-size: 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-      transition: all 0.2s ease;
-      z-index: 10;
-    }
-    
-    .snaptalk-close-btn:hover {
-      background: #dc2626;
-      transform: scale(1.1);
-      color: var(--snaptalk-text);
-    }
+    /* Кнопки закрытия удалены по просьбе пользователя */
     
     /* Контейнер сообщения - элегантный layout */
     .snaptalk-greeting-container {
@@ -146,6 +121,14 @@ export function generateWidgetStyles(colorConfig, position) {
       align-items: flex-end;
       gap: 14px;
       padding: 0 4px;
+    }
+    
+    /* Контейнер для сообщения и кнопки в одной строке */
+    .snaptalk-message-content {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      flex: 1;
     }
     
     /* Аватар - стиль Apple */
@@ -226,14 +209,14 @@ export function generateWidgetStyles(colorConfig, position) {
       font-weight: 400;
     }
     
-    /* Кнопка "Ответить" - стиль Apple */
+    /* Кнопка "Ответить" - компактная, рядом с сообщением */
     .snaptalk-reply-btn {
       background: var(--snaptalk-gradient);
       color: white;
       border: none;
-      padding: 12px 24px;
-      border-radius: var(--snaptalk-radius-xl);
-      font-size: 15px;
+      padding: 8px 16px;
+      border-radius: var(--snaptalk-radius-lg);
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       box-shadow: var(--snaptalk-shadow-button);
@@ -243,6 +226,8 @@ export function generateWidgetStyles(colorConfig, position) {
       overflow: hidden;
       backdrop-filter: blur(10px);
       letter-spacing: 0.02em;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     
     .snaptalk-reply-btn::before {

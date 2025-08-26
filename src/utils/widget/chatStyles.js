@@ -40,32 +40,7 @@ export function generateChatStyles() {
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     
-    .snaptalk-back-btn {
-      position: absolute;
-      top: 12px;
-      right: 16px;
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      color: white;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all var(--snaptalk-transition-fast);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      font-size: 18px;
-      font-weight: 300;
-    }
-    
-    .snaptalk-back-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: scale(1.1);
-      border-color: rgba(255, 255, 255, 0.4);
-    }
+    /* Кнопка закрытия удалена по просьбе пользователя */
     
     .snaptalk-chat-avatar {
       width: 32px;
