@@ -104,11 +104,12 @@ export function generateWidgetComponents() {
       padding-bottom: 20px;
     }
     
-    /* Мини-аватар внутри пузыря сообщения - правый верхний угол */
+    /* Мини-аватар внутри пузыря сообщения - правый центр */
     .snaptalk-bubble-avatar {
       position: absolute;
-      top: 8px;
+      top: 50%;
       right: 8px;
+      transform: translateY(-50%);
       width: 42px;
       height: 42px;
       border-radius: 50%;
@@ -141,7 +142,6 @@ export function generateWidgetComponents() {
     
     /* Корректировка padding текста когда есть мини-аватар */
     .snaptalk-message-bubble:has(.snaptalk-bubble-avatar) .snaptalk-message-text {
-      padding-top: 8px;
       padding-right: 50px;
     }
     
