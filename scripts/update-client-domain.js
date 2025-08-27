@@ -2,10 +2,10 @@ import { supabaseDB } from '../src/config/supabase.js';
 
 async function updateClientDomain() {
   try {
-    // Обновляем website_url на localhost для тестирования
+    // Обновляем website_url на savov.lovable.app для разрешения доступа
     const { data, error } = await supabaseDB
       .from('clients')
-      .update({ website_url: 'http://localhost:3000' })
+      .update({ website_url: 'https://savov.lovable.app' })
       .eq('api_key', 'snaptalk_cwj09fmbtzo_1756137141423')
       .select();
 

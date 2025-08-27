@@ -21,15 +21,9 @@ import { logWithTimestamp } from './utils.js';
  */
 export async function sendTelegramNotification(client, eventData, visitorId) {
   try {
-    // Отладочное логирование типов параметров
-    logWithTimestamp(`🔍 sendTelegramNotification called with:`);
-    logWithTimestamp(`🔍 - client: ${typeof client}`);
-    logWithTimestamp(`🔍 - eventData: ${typeof eventData}`);
-    logWithTimestamp(`🔍 - visitorId: ${typeof visitorId}`, visitorId);
-    
     // Валидация базовых входных данных
     if (!eventData || !visitorId) {
-      logWithTimestamp('Telegram notification failed: missing event data or visitor ID');
+      logWithTimestamp('❌ Telegram notification failed: missing event data or visitor ID');
       return {
         success: false,
         error: 'Missing event data or visitor ID'
@@ -37,30 +31,18 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     }
     
     if (!client) {
-      logWithTimestamp('Telegram notification failed: missing client data');
+      logWithTimestamp('❌ Telegram notification failed: missing client data');
       return {
         success: false,
         error: 'Missing client data'
       };
     }
     
-    // КРИТИЧЕСКИ ВАЖНО: Сохранение визита в таблицу site_visits ПЕРЕД проверкой Telegram конфигурации
-    logWithTimestamp(`📊 НАЧИНАЕМ СОХРАНЕНИЕ SITE_VISIT для visitor ${visitorId}`);
-    logWithTimestamp(`📊 Client ID: ${client.id}`);
-    logWithTimestamp(`📊 Event data:`, JSON.stringify(eventData, null, 2));
-    
+    // Сохранение визита в таблицу site_visits
     try {
-      logWithTimestamp(`📊 Вызываем saveSiteVisit с параметрами:`);
-      logWithTimestamp(`📊 - clientId: ${client.id}`);
-      logWithTimestamp(`📊 - visitorId: ${visitorId}`);
-      logWithTimestamp(`📊 - requestId: ${eventData.request_id}`);
-      logWithTimestamp(`📊 - pageUrl: ${eventData.page_url}`);
-      logWithTimestamp(`📊 - userAgent: ${eventData.user_agent}`);
-      logWithTimestamp(`📊 - ipAddress: ${eventData.ip_address}`);
-      
       await saveSiteVisit(
         client.id,
-        visitorId, // Используем visitorId из параметра функции, а не из eventData
+        visitorId,
         eventData.request_id,
         eventData.page_url,
         {
@@ -71,11 +53,8 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
         eventData.user_agent,
         eventData.ip_address
       );
-      logWithTimestamp(`📊 ✅ saveSiteVisit УСПЕШНО ЗАВЕРШЕН для visitor ${visitorId}`);
     } catch (siteVisitError) {
-      logWithTimestamp(`❌ ОШИБКА saveSiteVisit: ${siteVisitError.message}`);
-      logWithTimestamp(`❌ Stack trace:`, siteVisitError.stack);
-      logWithTimestamp(`❌ Полная ошибка:`, siteVisitError);
+      logWithTimestamp(`❌ Site visit save error: ${siteVisitError.message}`);
     }
     
     // Проверка конфигурации Telegram (после сохранения визита)
@@ -96,8 +75,6 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
       timestamp: new Date().toISOString(),
       eventData: eventData
     };
-    
-    logWithTimestamp(`Preparing Telegram notification for visitor ${visitorId} on site ${metadata.siteName}`);
     
     // Проверяем, существует ли уже посетитель для правильного форматирования сообщения
     // Для session событий используем поиск по конкретному клиенту
@@ -132,31 +109,36 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     
     // Форматирование сообщения в зависимости от типа события
     let message;
-    const eventType = eventData.event_type;
+    const shortVisitorId = visitorId.slice(0, 8);
+    const timeStr = new Date(eventData.event_timestamp).toLocaleString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit'
+    });
     
-    if (eventType === 'tab_switch') {
-      const messageResult = formatTabSwitchMessage({
-        eventData,
-        visitorId,
-        sessionDuration: eventData.session_duration
-      });
-      message = messageResult.fullMessage;
-    } else if (eventType === 'session_end') {
-      const messageResult = formatSessionEndMessage({
-        eventData,
-        visitorId,
-        sessionDuration: eventData.session_duration
-      });
-      message = messageResult.fullMessage;
-    } else {
-      // Для session_start и page_view используем стандартное форматирование
-      const messageResult = formatTelegramMessage({
-        eventData,
-        visitorId,
-        isExistingVisitor,
-        isPageTransition: isExistingVisitor
-      });
-      message = messageResult.fullMessage;
+    switch (eventData.event_type) {
+      case 'tab_switch':
+        message = `🔄 Клиент переключил вкладку\n` +
+                 `👤 ${shortVisitorId} • ${timeStr}\n` +
+                 `📄 ${eventData.page_title || eventData.page_url}`;
+        break;
+      case 'session_end':
+        const duration = eventData.session_duration ? 
+          `${Math.round(eventData.session_duration / 1000)}с` : '?';
+        message = `🔚 Клиент завершил сессию\n` +
+                 `👤 ${shortVisitorId} • ${timeStr} • ⏱️${duration}\n` +
+                 `📄 ${eventData.page_title || eventData.page_url}`;
+        break;
+      case 'page_view':
+      case 'session_start':
+      default:
+        const device = eventData.user_agent?.includes('Mobile') ? '📱' : '💻';
+        message = `👋 Новый посетитель\n` +
+                 `👤 ${shortVisitorId} • ${timeStr} • ${device}\n` +
+                 `📄 ${eventData.page_title || eventData.page_url}\n` +
+                 `🔗 ${eventData.referrer || 'Прямой переход'}`;
+        break;
     }
     
     // Отправка уведомления через telegramService
@@ -177,7 +159,6 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     
     // sendToTopic возвращает результат Telegram API напрямую
     if (telegramResult && telegramResult.message_id) {
-      logWithTimestamp(`Telegram notification sent successfully for visitor ${visitorId}`);
       return {
         success: true,
         messageId: telegramResult.message_id,
@@ -185,7 +166,7 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
         siteId: client.id
       };
     } else {
-      logWithTimestamp(`Telegram notification failed for visitor ${visitorId}: unexpected result format`);
+      logWithTimestamp(`❌ Telegram notification failed for visitor ${visitorId}: unexpected result format`);
       return {
         success: false,
         error: 'Unexpected result format from sendToTopic',
@@ -195,7 +176,7 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     }
     
   } catch (error) {
-    logWithTimestamp(`Error sending Telegram notification: ${error.message}`);
+    logWithTimestamp(`❌ Error sending Telegram notification: ${error.message}`);
     return {
       success: false,
       error: error.message,
@@ -205,86 +186,7 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
   }
 }
 
-/**
- * Форматирование сообщения для Telegram (устаревшая функция, теперь используется сервис)
- * @param {Object} metadata - Метаданные события
- * @param {boolean} hasExistingTopic - Есть ли существующий топик для посетителя
- * @returns {string} - Отформатированное сообщение
- * @deprecated Используйте formatTelegramMessage из messageFormatterService
- */
-function formatTelegramMessageLegacy(metadata, hasExistingTopic = false) {
-  const {
-    siteName,
-    visitorId,
-    timestamp,
-    eventData
-  } = metadata;
-  
-  const result = formatTelegramMessage({
-    eventData,
-    visitorId,
-    isExistingVisitor: hasExistingTopic,
-    isPageTransition: hasExistingTopic
-  });
-  
-  return result.fullMessage;
-}
 
-/**
- * Парсинг информации о браузере из User-Agent
- * @param {string} userAgent - User-Agent строка
- * @returns {string|null} - Информация о браузере
- */
-function parseBrowserInfo(userAgent) {
-  if (!userAgent || typeof userAgent !== 'string') {
-    return null;
-  }
-  
-  try {
-    // Простой парсинг основных браузеров
-    if (userAgent.includes('Chrome/') && !userAgent.includes('Edg/')) {
-      const chromeMatch = userAgent.match(/Chrome\/(\d+\.\d+)/);
-      return chromeMatch ? `Chrome ${chromeMatch[1]}` : 'Chrome';
-    }
-    
-    if (userAgent.includes('Firefox/')) {
-      const firefoxMatch = userAgent.match(/Firefox\/(\d+\.\d+)/);
-      return firefoxMatch ? `Firefox ${firefoxMatch[1]}` : 'Firefox';
-    }
-    
-    if (userAgent.includes('Safari/') && !userAgent.includes('Chrome/')) {
-      const safariMatch = userAgent.match(/Version\/(\d+\.\d+).*Safari/);
-      return safariMatch ? `Safari ${safariMatch[1]}` : 'Safari';
-    }
-    
-    if (userAgent.includes('Edg/')) {
-      const edgeMatch = userAgent.match(/Edg\/(\d+\.\d+)/);
-      return edgeMatch ? `Edge ${edgeMatch[1]}` : 'Edge';
-    }
-    
-    if (userAgent.includes('Opera/') || userAgent.includes('OPR/')) {
-      const operaMatch = userAgent.match(/(?:Opera\/|OPR\/)([\d\.]+)/);
-      return operaMatch ? `Opera ${operaMatch[1]}` : 'Opera';
-    }
-    
-    // Мобильные браузеры
-    if (userAgent.includes('Mobile') || userAgent.includes('Android')) {
-      if (userAgent.includes('Chrome/')) {
-        return 'Chrome Mobile';
-      }
-      if (userAgent.includes('Safari/')) {
-        return 'Safari Mobile';
-      }
-      return 'Mobile Browser';
-    }
-    
-    return null;
-    
-  } catch (error) {
-    logWithTimestamp(`Error parsing browser info: ${error.message}`);
-    return null;
-  }
-}
 
 /**
  * Отправка тестового Telegram уведомления

@@ -54,18 +54,15 @@ export async function dbGetTopic(clientId) {
 // 🆕 Поиск существующего посетителя по visitor_id для конкретного клиента
 export async function findExistingVisitorForClient(clientId, visitorId) {
   if (!sb || !visitorId) {
-    console.log(`❌ findExistingVisitorForClient: No Supabase connection or visitorId`);
     return null;
   }
   
   try {
-    console.log(`🔍 Searching for existing visitor ${visitorId.slice(0,8)}... for client ${clientId}`);
-    
     const { data, error } = await sb
       .from('client_topics')
       .select('topic_id, visitor_id, created_at, page_url, client_id')
       .eq('visitor_id', visitorId)
-      .eq('client_id', clientId)  // 🔥 Ищем для конкретного клиента!
+      .eq('client_id', clientId)
       .maybeSingle();
     
     if (error) {
@@ -73,13 +70,7 @@ export async function findExistingVisitorForClient(clientId, visitorId) {
       return null;
     }
     
-    if (data) {
-      console.log(`✅ Found existing visitor for client ${clientId}: topic_id=${data.topic_id}, created_at=${data.created_at}`);
-    } else {
-      console.log(`❌ No existing visitor found for ${visitorId.slice(0,8)}... and client ${clientId}`);
-    }
-    
-    return data; // { topic_id, visitor_id, created_at, page_url, client_id } или null
+    return data;
   } catch (error) {
     console.error('❌ findExistingVisitorForClient error:', error);
     return null;
@@ -103,12 +94,10 @@ export async function findExistingVisitor(clientId, visitorId) {
   
   // Используем VisitorCache для обработки с блокировкой
   return await visitorCache.processWithLock(visitorId, async () => {
-    console.log(`🔍 Searching for existing visitor ${visitorId.slice(0,8)}... in client_topics (ANY client)`);
-    
     const { data, error } = await sb
       .from('client_topics')
       .select('topic_id, visitor_id, created_at, page_url, client_id')
-      .eq('visitor_id', visitorId)  // 🔥 ТОЛЬКО по visitor_id! НЕ фильтруем по client_id!
+      .eq('visitor_id', visitorId)
       .maybeSingle();
     
     if (error) {
@@ -116,13 +105,7 @@ export async function findExistingVisitor(clientId, visitorId) {
       return null;
     }
     
-    if (data) {
-      console.log(`✅ Found existing visitor: topic_id=${data.topic_id}, original_client_id=${data.client_id}, created_at=${data.created_at}`);
-    } else {
-      console.log(`❌ No existing visitor found for ${visitorId.slice(0,8)}... (first visit ever)`);
-    }
-    
-    return data; // { topic_id, visitor_id, created_at, page_url, client_id } или null
+    return data;
   });
 }
 
@@ -294,8 +277,6 @@ export async function saveSiteVisit(clientId, visitorId, requestId, url, meta, u
       },
       visit_timestamp: new Date().toISOString()
     };
-
-    console.log(`📊 Saving site visit: ${visitorId.slice(0,8)}... → ${url}`);
     
     const { data, error } = await sb
       .from('site_visits')
@@ -304,7 +285,6 @@ export async function saveSiteVisit(clientId, visitorId, requestId, url, meta, u
 
     if (error) {
       console.error('❌ saveSiteVisit error:', error);
-      console.error('❌ Failed siteVisitData:', siteVisitData);
     } else {
       console.log(`✅ Site visit saved: ${data[0]?.id || 'unknown'} [${visitorId.slice(0,8)}...]`);
     }
@@ -316,23 +296,18 @@ export async function saveSiteVisit(clientId, visitorId, requestId, url, meta, u
 // ===== Telegram helpers =====
 // 🆕 Умная функция обеспечения топика для посетителя конкретного клиента
 export async function ensureTopicForVisitorForClient(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
-  // 1️⃣ Если есть visitorId - ищем существующего посетителя для конкретного клиента
+  // Если есть visitorId - ищем существующего посетителя для конкретного клиента
   if (visitorId) {
-    console.log(`🔍 Checking for existing visitor: ${visitorId.slice(0,8)}... for client ${clientId}`);
-    
     const existingVisitor = await findExistingVisitorForClient(clientId, visitorId);
     if (existingVisitor) {
-      console.log(`👤 Found existing visitor for client ${clientId} with topic: ${existingVisitor.topic_id}`);
-      
-      // 2️⃣ Проверяем валидность топика в Telegram
+      // Проверяем валидность топика в Telegram
       const botToken = client?.telegram_bot_token || BOT_TOKEN;
       const groupId = client?.telegram_group_id || SUPERGROUP_ID;
       
       const isValidTopic = await isTopicValidInTelegram(botToken, groupId, existingVisitor.topic_id);
       if (isValidTopic) {
-        console.log(`✅ Topic ${existingVisitor.topic_id} is valid - reusing for visitor and client ${clientId}`);
         
-        // 3️⃣ Обновляем ТОЛЬКО метаданные последнего визита (НЕ создаем новую запись!)
+        // Обновляем метаданные последнего визита
         try {
           const { error } = await sb
             .from('client_topics')
@@ -356,7 +331,6 @@ export async function ensureTopicForVisitorForClient(clientId, client, visitorId
             .eq('visitor_id', visitorId);
           
           if (error) console.error('❌ Update existing visitor error:', error);
-          else console.log(`🔄 Updated existing visitor metadata for client ${clientId}: ${visitorId.slice(0,8)}...`);
         } catch (error) {
           console.error('❌ Update existing visitor error:', error);
         }
@@ -366,37 +340,30 @@ export async function ensureTopicForVisitorForClient(clientId, client, visitorId
           isExistingVisitor: true,
           previousUrl: existingVisitor.page_url,
           firstVisit: existingVisitor.created_at,
-          originalClientId: existingVisitor.client_id  // 🔥 Оригинальный client_id
+          originalClientId: existingVisitor.client_id
         };
-      } else {
-        console.log(`❌ Topic ${existingVisitor.topic_id} is invalid - creating new topic for client ${clientId}`);
       }
     }
   }
   
-  // 4️⃣ Создаем новый топик (для новых посетителей или если старый топик недействителен)
+  // Создаем новый топик (для новых посетителей или если старый топик недействителен)
   return await createNewTopic(clientId, client, visitorId, requestId, url, meta);
 }
 
 // 🆕 Умная функция обеспечения топика для посетителя (глобальный поиск)
 export async function ensureTopicForVisitor(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
-  // 1️⃣ Если есть visitorId - ищем существующего посетителя
+  // Если есть visitorId - ищем существующего посетителя
   if (visitorId) {
-    console.log(`🔍 Checking for existing visitor: ${visitorId.slice(0,8)}...`);
-    
     const existingVisitor = await findExistingVisitor(clientId, visitorId);
     if (existingVisitor) {
-      console.log(`👤 Found existing visitor with topic: ${existingVisitor.topic_id}`);
-      
-      // 2️⃣ Проверяем валидность топика в Telegram
+      // Проверяем валидность топика в Telegram
       const botToken = client?.telegram_bot_token || BOT_TOKEN;
       const groupId = client?.telegram_group_id || SUPERGROUP_ID;
       
       const isValidTopic = await isTopicValidInTelegram(botToken, groupId, existingVisitor.topic_id);
       if (isValidTopic) {
-        console.log(`✅ Topic ${existingVisitor.topic_id} is valid - reusing for visitor`);
         
-        // 3️⃣ Обновляем ТОЛЬКО метаданные последнего визита (НЕ создаем новую запись!)
+        // Обновляем метаданные последнего визита
         try {
           const { error } = await sb
             .from('client_topics')
@@ -420,7 +387,6 @@ export async function ensureTopicForVisitor(clientId, client, visitorId = null, 
             .eq('visitor_id', visitorId);
           
           if (error) console.error('❌ Update existing visitor error:', error);
-          else console.log(`🔄 Updated existing visitor metadata: ${visitorId.slice(0,8)}...`);
         } catch (error) {
           console.error('❌ Update existing visitor error:', error);
         }
@@ -430,15 +396,13 @@ export async function ensureTopicForVisitor(clientId, client, visitorId = null, 
           isExistingVisitor: true,
           previousUrl: existingVisitor.page_url,
           firstVisit: existingVisitor.created_at,
-          originalClientId: existingVisitor.client_id  // 🔥 Оригинальный client_id
+          originalClientId: existingVisitor.client_id
         };
-      } else {
-        console.log(`❌ Topic ${existingVisitor.topic_id} is invalid - creating new topic`);
       }
     }
   }
   
-  // 4️⃣ Создаем новый топик (для новых посетителей или если старый топик недействителен)
+  // Создаем новый топик (для новых посетителей или если старый топик недействителен)
   return await createNewTopic(clientId, client, visitorId, requestId, url, meta);
 }
 
@@ -451,8 +415,6 @@ export async function ensureTopic(clientId, client, visitorId = null, requestId 
 
 // 🆕 Вынесенная логика создания нового топика
 export async function createNewTopic(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
-  console.log(`🆕 Creating new topic for client: ${client?.client_name || clientId}`);
-  
   let topicId = await dbGetTopic(clientId);
   if (topicId) return topicId;
 
@@ -479,7 +441,6 @@ export async function createNewTopic(clientId, client, visitorId = null, request
   topicId = data.result.message_thread_id;
 
   await dbSaveTopic(clientId, topicId, visitorId, requestId, url, meta);
-  console.log(`✅ Created topic ${topicId} for client ${client?.client_name || clientId}${visitorId ? ` [Visitor: ${visitorId.slice(0,8)}...]` : ''}`);
   
   return {
     topicId,
@@ -505,10 +466,8 @@ export async function sendToTopic({ clientId, text, prefix = '', client, visitor
     disable_web_page_preview: true
   };
   
-  console.log(`📤 Sending to Telegram: bot=${botToken.slice(0,10)}..., group=${groupId}, topic=${topicId}`);
   const { data } = await axios.post(telegramApiUrl, payload);
   if (!data?.ok) throw new Error('sendMessage failed: ' + JSON.stringify(data));
-  console.log(`✅ Message sent to Telegram topic ${topicId}`);
   return data.result;
 }
 
@@ -528,10 +487,8 @@ export async function sendTelegramMessage(topicId, message, prefix, client) {
     disable_web_page_preview: true
   };
   
-  console.log(`📤 Sending to Telegram topic ${topicId}: ${botToken.slice(0,10)}...`);
   const { data } = await axios.post(telegramApiUrl, payload);
   if (!data?.ok) throw new Error('sendMessage failed: ' + JSON.stringify(data));
-  console.log(`✅ Message sent to Telegram topic ${topicId}`);
   return data.result;
 }
 
