@@ -130,8 +130,8 @@ export function generateWidgetCore() {
             this.requestId = result.requestId;
             console.log('📌 SnapTalk FingerprintJS initialized:', result.visitorId);
             
-            // 🔥 АВТОМАТИЧЕСКИЙ ТРЕКИНГ ВИЗИТА
-            this.trackVisit();
+            // 🔥 АВТОМАТИЧЕСКИЙ ТРЕКИНГ ВИЗИТА - ОТКЛЮЧЕН
+            // this.trackVisit(); // Отключено для избежания дублирования с trackPageView
           })
           .catch(error => {
             console.warn('⚠️ FingerprintJS failed to initialize:', error);
