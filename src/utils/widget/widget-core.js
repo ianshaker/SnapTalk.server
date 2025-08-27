@@ -31,7 +31,7 @@ export function generateWidgetCore() {
       this.init();
       // Инициализация PageTracker после получения visitorId
       this.initPageTracking();
-      this.initSessionTracking();
+      // initSessionTracking() перенесен в initTracking() после получения visitorId
     }
     
     init() {
@@ -142,6 +142,9 @@ export function generateWidgetCore() {
         
         // Обновляем идентификаторы в SessionTracker
         this.sessionTracker.updateIdentifiers(this.visitorId, this.requestId);
+        
+        // Инициализируем отслеживание сессий ПОСЛЕ получения visitorId
+        this.sessionTracker.initSessionTracking();
         
         // 🔥 АВТОМАТИЧЕСКИЙ ТРЕКИНГ ВИЗИТА - ОТКЛЮЧЕН
         // this.trackVisit(); // Отключено для избежания дублирования с trackPageView
