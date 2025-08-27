@@ -125,10 +125,17 @@ export function validateTrackingData(data) {
 
   // Валидация session tracking полей
   if (data.sessionDuration !== undefined) {
-    if (typeof data.sessionDuration === 'number' && data.sessionDuration >= 0) {
-      cleanData.sessionDuration = data.sessionDuration;
+    // Для page tracking API sessionDuration может присутствовать, но мы его игнорируем
+    // если это не session_end событие
+    if (data.eventType === 'session_end') {
+      if (typeof data.sessionDuration === 'number' && data.sessionDuration >= 0) {
+        cleanData.sessionDuration = data.sessionDuration;
+      } else {
+        errors.push('sessionDuration must be a non-negative number for session_end events');
+      }
     } else {
-      errors.push('sessionDuration must be a non-negative number if provided');
+      // Для других типов событий просто игнорируем sessionDuration
+      console.log(`⚠️ sessionDuration ignored for event type '${data.eventType || 'page_view'}' (only used for session_end)`);
     }
   }
 

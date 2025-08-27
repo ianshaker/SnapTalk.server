@@ -41,8 +41,8 @@ const app = express();
 // CORS: разрешаем SnapTalk фронтенд и *.lovable.app
 app.use(cors({
   origin: (origin, cb) => {
-    // Разрешаем запросы без origin (health checks, Postman, Telegram webhook)
-    if (!origin) return cb(null, true);
+    // Разрешаем запросы без origin (например, мобильные приложения или локальные файлы)
+    if (!origin || origin === 'null') return cb(null, true);
     
     // Проверяем точные совпадения
     if (allowedOrigins.includes(origin)) return cb(null, true);
