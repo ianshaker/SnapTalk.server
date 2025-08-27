@@ -20,7 +20,7 @@ import {
 import snapTalkRoutes from './src/routes/snapTalkClients.js';
 import widgetRoutes from './src/routes/widgets.js';
 import adminRoutes from './src/routes/adminRoutes.js';
-import pageTrackingRoutes from './src/routes/pageTracking.js';
+import pageTrackingRoutes from './src/routes/pageTracking/index.js';
 
 import { apiKeys, loadActiveClientsToApiKeys, updateClientInApiKeys } from './src/routes/snapTalkClients.js';
 import telegramRoutes, { setPushToClient } from './src/routes/telegram.js';
@@ -67,7 +67,7 @@ app.use(bodyParser.json({ limit: '1mb' }));
 app.use('/api/snaptalk', snapTalkRoutes);
 app.use('/api', widgetRoutes);
 app.use('/api', adminRoutes);
-app.use('/api', pageTrackingRoutes);
+app.use('/api/track', pageTrackingRoutes);
 
 
 
