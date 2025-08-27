@@ -21,7 +21,7 @@ import { logWithTimestamp } from './utils.js';
 export async function sendTelegramNotification(client, eventData, visitorId) {
   try {
     // Валидация входных данных
-    if (!client || !client.telegram_chat_id || !client.telegram_bot_token) {
+    if (!client || !client.telegram_group_id || !client.telegram_bot_token) {
       logWithTimestamp(`Telegram notification skipped: missing telegram configuration for client ${client?.id}`);
       return {
         success: false,
@@ -361,10 +361,10 @@ export function validateTelegramConfig(client) {
     errors.push('Telegram bot token format is invalid');
   }
   
-  if (!client.telegram_chat_id) {
-    errors.push('Telegram chat ID is missing');
-  } else if (typeof client.telegram_chat_id !== 'string' && typeof client.telegram_chat_id !== 'number') {
-    errors.push('Telegram chat ID format is invalid');
+  if (!client.telegram_group_id) {
+    errors.push('Telegram group ID is missing');
+  } else if (typeof client.telegram_group_id !== 'string' && typeof client.telegram_group_id !== 'number') {
+    errors.push('Telegram group ID format is invalid');
   }
   
   if (client.telegram_topic_mapping && typeof client.telegram_topic_mapping !== 'object') {
