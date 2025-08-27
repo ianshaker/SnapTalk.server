@@ -306,7 +306,9 @@ export function validateSessionTrackingData(data) {
       cleanData.sessionDuration = data.sessionDuration;
     }
   } else if (data.sessionDuration !== undefined) {
-    errors.push('sessionDuration can only be provided for session_end events');
+    // Для других типов событий просто игнорируем sessionDuration, не выдаем ошибку
+    // Это позволяет виджету отправлять sessionDuration для всех событий без ошибок
+    console.log(`⚠️ sessionDuration ignored for event type '${data.eventType}' (only used for session_end)`);
   }
 
   // Опциональные поля
