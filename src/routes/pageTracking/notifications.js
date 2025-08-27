@@ -8,7 +8,7 @@
  * - Обработка ошибок отправки
  */
 
-import { sendTelegramMessage } from '../../services/telegramService.js';
+import { sendToTopic } from '../../services/telegramService.js';
 import { logWithTimestamp } from './utils.js';
 
 /**
@@ -49,52 +49,39 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     
     logWithTimestamp(`Preparing Telegram notification for visitor ${visitorId} on site ${metadata.siteName}`);
     
-    // Определение топика для посетителя
-    let topicId = null;
-    if (client.telegram_topic_mapping && typeof client.telegram_topic_mapping === 'object') {
-      // Проверяем есть ли уже топик для этого посетителя
-      topicId = client.telegram_topic_mapping[visitorId];
-      
-      if (!topicId) {
-        // Создаем новый топик для нового посетителя
-        const visitorTopics = Object.values(client.telegram_topic_mapping);
-        const maxTopicId = visitorTopics.length > 0 ? Math.max(...visitorTopics.filter(id => typeof id === 'number')) : 0;
-        topicId = maxTopicId + 1;
-        
-        // Сохраняем маппинг (в реальном приложении это нужно сохранить в БД)
-        client.telegram_topic_mapping[visitorId] = topicId;
-        
-        logWithTimestamp(`Created new topic ${topicId} for visitor ${visitorId}`);
-      } else {
-        logWithTimestamp(`Using existing topic ${topicId} for visitor ${visitorId}`);
-      }
-    }
-    
     // Форматирование сообщения
-    const message = formatTelegramMessage(metadata, topicId !== null);
+    const message = formatTelegramMessage(metadata, false); // Пока считаем всех новыми
     
-    // Отправка уведомления через telegramService
-    const telegramResult = await sendTelegramMessage(
-      topicId,
-      message,
-      '🔔', // prefix
-      client
-    );
+    // Отправка уведомления через telegramService с автоматическим управлением топиками
+    const telegramResult = await sendToTopic({
+      clientId: client.id,
+      text: message,
+      prefix: '🔔 ',
+      client: client,
+      visitorId: visitorId,
+      requestId: eventData.request_id,
+      url: eventData.page_url,
+      meta: {
+        title: eventData.page_title,
+        ref: eventData.referrer,
+        utm: eventData.utm_data
+      }
+    });
     
-    if (telegramResult.success) {
-      logWithTimestamp(`Telegram notification sent successfully for visitor ${visitorId} (topic: ${topicId || 'none'})`);
+    // sendToTopic возвращает результат Telegram API напрямую
+    if (telegramResult && telegramResult.message_id) {
+      logWithTimestamp(`Telegram notification sent successfully for visitor ${visitorId}`);
       return {
         success: true,
-        messageId: telegramResult.messageId,
-        topicId: topicId,
+        messageId: telegramResult.message_id,
         visitorId: visitorId,
         siteId: client.id
       };
     } else {
-      logWithTimestamp(`Telegram notification failed for visitor ${visitorId}: ${telegramResult.error}`);
+      logWithTimestamp(`Telegram notification failed for visitor ${visitorId}: unexpected result format`);
       return {
         success: false,
-        error: telegramResult.error,
+        error: 'Unexpected result format from sendToTopic',
         visitorId: visitorId,
         siteId: client.id
       };
