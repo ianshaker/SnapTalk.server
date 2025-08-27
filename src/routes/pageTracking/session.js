@@ -84,11 +84,11 @@ export async function trackSession(req, res) {
     const savedEvent = await savePageEvent(eventData);
     logWithTimestamp(`✅ Session event '${eventType}' saved with ID: ${savedEvent.id}`);
 
-    // Отправка Telegram уведомления только для session_start событий
-    if (eventType === 'session_start' && client.telegram_enabled) {
+    // Отправка Telegram уведомления для session событий
+    if (client.telegram_enabled && ['session_start', 'session_end', 'tab_switch'].includes(eventType)) {
       try {
         await sendTelegramNotification(client, eventData, savedEvent);
-        logWithTimestamp(`📱 Telegram notification sent for session start`);
+        logWithTimestamp(`📱 Telegram notification sent for ${eventType}`);
       } catch (telegramError) {
         logWithTimestamp(`❌ Telegram notification failed: ${telegramError.message}`);
         // Не прерываем выполнение, если уведомление не отправилось

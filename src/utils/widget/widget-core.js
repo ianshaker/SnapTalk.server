@@ -216,8 +216,8 @@ export function generateWidgetCore() {
             userAgent: navigator.userAgent,
             // Session tracking поля
             eventType: 'page_view',
-            isSessionActive: this.isSessionActive,
-            sessionDuration: Date.now() - this.sessionStartTime
+            isSessionActive: this.isSessionActive
+            // sessionDuration убираем - оно только для session_end событий
           })
         });
         
@@ -345,8 +345,6 @@ export function generateWidgetCore() {
       }
       
       try {
-        const sessionDuration = Date.now() - this.sessionStartTime;
-        
         const payload = {
           siteKey: API_KEY,
           visitorId: this.visitorId,
@@ -356,13 +354,13 @@ export function generateWidgetCore() {
           title: document.title,
           userAgent: navigator.userAgent,
           isSessionActive: this.isSessionActive,
-          sessionDuration: sessionDuration,
           ...additionalData
         };
         
         // Для session_end добавляем специальные поля
         if (eventType === 'session_end') {
           payload.isSessionEnd = true;
+          payload.sessionDuration = Date.now() - this.sessionStartTime;
           this.isSessionActive = false;
         } else if (eventType === 'session_start') {
           payload.isSessionStart = true;

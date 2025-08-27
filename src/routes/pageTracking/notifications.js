@@ -8,8 +8,8 @@
  * - Обработка ошибок отправки
  */
 
-import { sendToTopic, ensureTopicForVisitor } from '../../services/telegramService.js';
-import { formatTelegramMessage, getMessagePrefix } from '../../services/messageFormatterService.js';
+import { sendToTopic, ensureTopicForVisitor, saveSiteVisit } from '../../services/telegramService.js';
+import { formatTelegramMessage, getMessagePrefix, formatTabSwitchMessage, formatSessionEndMessage } from '../../services/messageFormatterService.js';
 import { logWithTimestamp } from './utils.js';
 
 /**
@@ -66,14 +66,51 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     
     const isExistingVisitor = topicInfo && typeof topicInfo === 'object' && topicInfo.isExistingVisitor;
     
-    // Форматирование сообщения с учетом статуса посетителя
-    const messageResult = formatTelegramMessage({
-      eventData,
-      visitorId,
-      isExistingVisitor,
-      isPageTransition: isExistingVisitor
-    });
-    const message = messageResult.fullMessage;
+    // Форматирование сообщения в зависимости от типа события
+    let message;
+    const eventType = eventData.event_type;
+    
+    if (eventType === 'tab_switch') {
+      message = formatTabSwitchMessage({
+        eventData,
+        visitorId,
+        sessionDuration: eventData.session_duration
+      });
+    } else if (eventType === 'session_end') {
+      message = formatSessionEndMessage({
+        eventData,
+        visitorId,
+        sessionDuration: eventData.session_duration
+      });
+    } else {
+      // Для session_start и page_view используем стандартное форматирование
+      const messageResult = formatTelegramMessage({
+        eventData,
+        visitorId,
+        isExistingVisitor,
+        isPageTransition: isExistingVisitor
+      });
+      message = messageResult.fullMessage;
+    }
+    
+    // Сохранение визита в таблицу site_visitors
+    try {
+      await saveSiteVisit(
+        client.id,
+        visitorId,
+        eventData.request_id,
+        eventData.page_url,
+        {
+          title: eventData.page_title,
+          ref: eventData.referrer,
+          utm: eventData.utm_data
+        },
+        eventData.user_agent,
+        eventData.ip_address
+      );
+    } catch (siteVisitError) {
+      logWithTimestamp(`Warning: Failed to save site visit: ${siteVisitError.message}`);
+    }
     
     // Отправка уведомления через telegramService
     const telegramResult = await sendToTopic({

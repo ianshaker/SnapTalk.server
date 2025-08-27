@@ -163,6 +163,107 @@ export function formatTelegramMessage(options) {
 }
 
 /**
+ * Форматирование сообщения для события переключения вкладки
+ * @param {Object} options - Параметры сообщения
+ * @param {string} options.url - URL страницы
+ * @param {string} options.visitorId - ID посетителя
+ * @param {string} [options.pageTitle] - Заголовок страницы
+ * @param {Date|string} [options.timestamp] - Временная метка
+ * @param {number} [options.sessionDuration] - Длительность сессии в секундах
+ * @param {Object} [options.eventData] - Данные события
+ * @returns {Object} - Объект с сообщением и префиксом
+ */
+export function formatTabSwitchMessage({ url, visitorId, pageTitle, timestamp, sessionDuration, eventData }) {
+  const finalUrl = url || eventData?.page_url;
+  const finalPageTitle = pageTitle || eventData?.page_title;
+  const finalTimestamp = timestamp || new Date();
+  
+  const timeFormatted = formatTimestamp(finalTimestamp);
+  const durationFormatted = sessionDuration ? formatDuration(sessionDuration) : 'неизвестно';
+  
+  let message = `\`${finalUrl}\`\n`;
+  message += `Visitor ID: ${visitorId}\n`;
+  
+  if (finalPageTitle && finalPageTitle.trim()) {
+    message += `${finalPageTitle}\n\n`;
+  } else {
+    message += `\n`;
+  }
+  
+  message += `⏱️ Время на странице: ${durationFormatted}\n`;
+  message += timeFormatted;
+  
+  const prefix = `🔄 ПЕРЕКЛЮЧЕНИЕ ВКЛАДКИ\n\n`;
+  
+  return {
+    message,
+    prefix,
+    fullMessage: prefix + message
+  };
+}
+
+/**
+ * Форматирование сообщения для события завершения сессии
+ * @param {Object} options - Параметры сообщения
+ * @param {string} options.url - URL страницы
+ * @param {string} options.visitorId - ID посетителя
+ * @param {string} [options.pageTitle] - Заголовок страницы
+ * @param {Date|string} [options.timestamp] - Временная метка
+ * @param {number} [options.sessionDuration] - Длительность сессии в секундах
+ * @param {Object} [options.eventData] - Данные события
+ * @returns {Object} - Объект с сообщением и префиксом
+ */
+export function formatSessionEndMessage({ url, visitorId, pageTitle, timestamp, sessionDuration, eventData }) {
+  const finalUrl = url || eventData?.page_url;
+  const finalPageTitle = pageTitle || eventData?.page_title;
+  const finalTimestamp = timestamp || new Date();
+  
+  const timeFormatted = formatTimestamp(finalTimestamp);
+  const durationFormatted = sessionDuration ? formatDuration(sessionDuration) : 'неизвестно';
+  
+  let message = `\`${finalUrl}\`\n`;
+  message += `Visitor ID: ${visitorId}\n`;
+  
+  if (finalPageTitle && finalPageTitle.trim()) {
+    message += `${finalPageTitle}\n\n`;
+  } else {
+    message += `\n`;
+  }
+  
+  message += `⏱️ Общее время сессии: ${durationFormatted}\n`;
+  message += timeFormatted;
+  
+  const prefix = `👋 ЗАВЕРШЕНИЕ СЕССИИ\n\n`;
+  
+  return {
+    message,
+    prefix,
+    fullMessage: prefix + message
+  };
+}
+
+/**
+ * Форматирование длительности в читаемый вид
+ * @param {number} seconds - Длительность в секундах
+ * @returns {string} - Отформатированная длительность
+ */
+function formatDuration(seconds) {
+  if (!seconds || seconds < 0) return '0 сек';
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  if (hours > 0) {
+    return `${hours}ч ${minutes}м ${secs}с`;
+  } else if (minutes > 0) {
+    return `${minutes}м ${secs}с`;
+  } else {
+    return `${secs}с`;
+  }
+}
+
+/**
  * Парсинг информации о браузере из User-Agent (вспомогательная функция)
  * @param {string} userAgent - User-Agent строка
  * @returns {string|null} - Информация о браузере

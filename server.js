@@ -34,7 +34,7 @@ import {
   saveSiteVisit,
   memoryMap
 } from './src/services/telegramService.js';
-import { formatNewVisitorMessage, formatReturnVisitorMessage } from './src/services/messageFormatterService.js';
+import { formatNewVisitorMessage, formatReturnVisitorMessage, formatTabSwitchMessage, formatSessionEndMessage } from './src/services/messageFormatterService.js';
 
 const app = express();
 
