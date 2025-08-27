@@ -21,21 +21,52 @@ import { logWithTimestamp } from './utils.js';
  */
 export async function sendTelegramNotification(client, eventData, visitorId) {
   try {
-    // Валидация входных данных
-    if (!client || !client.telegram_group_id || !client.telegram_bot_token) {
-      logWithTimestamp(`Telegram notification skipped: missing telegram configuration for client ${client?.id}`);
-      return {
-        success: false,
-        error: 'Missing Telegram configuration',
-        skipped: true
-      };
-    }
-    
+    // Валидация базовых входных данных
     if (!eventData || !visitorId) {
       logWithTimestamp('Telegram notification failed: missing event data or visitor ID');
       return {
         success: false,
         error: 'Missing event data or visitor ID'
+      };
+    }
+    
+    if (!client) {
+      logWithTimestamp('Telegram notification failed: missing client data');
+      return {
+        success: false,
+        error: 'Missing client data'
+      };
+    }
+    
+    // КРИТИЧЕСКИ ВАЖНО: Сохранение визита в таблицу site_visits ПЕРЕД проверкой Telegram конфигурации
+    logWithTimestamp(`📊 About to call saveSiteVisit for visitor ${visitorId}`);
+    try {
+      await saveSiteVisit(
+        client.id,
+        visitorId,
+        eventData.request_id,
+        eventData.page_url,
+        {
+          title: eventData.page_title,
+          ref: eventData.referrer,
+          utm: eventData.utm_data
+        },
+        eventData.user_agent,
+        eventData.ip_address
+      );
+      logWithTimestamp(`📊 saveSiteVisit completed successfully for visitor ${visitorId}`);
+    } catch (siteVisitError) {
+      logWithTimestamp(`❌ Failed to save site visit: ${siteVisitError.message}`);
+      logWithTimestamp(`❌ saveSiteVisit error details:`, siteVisitError);
+    }
+    
+    // Проверка конфигурации Telegram (после сохранения визита)
+    if (!client.telegram_group_id || !client.telegram_bot_token) {
+      logWithTimestamp(`Telegram notification skipped: missing telegram configuration for client ${client.id}`);
+      return {
+        success: false,
+        error: 'Missing Telegram configuration',
+        skipped: true
       };
     }
     
@@ -106,25 +137,6 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
         isPageTransition: isExistingVisitor
       });
       message = messageResult.fullMessage;
-    }
-    
-    // Сохранение визита в таблицу site_visitors
-    try {
-      await saveSiteVisit(
-        client.id,
-        visitorId,
-        eventData.request_id,
-        eventData.page_url,
-        {
-          title: eventData.page_title,
-          ref: eventData.referrer,
-          utm: eventData.utm_data
-        },
-        eventData.user_agent,
-        eventData.ip_address
-      );
-    } catch (siteVisitError) {
-      logWithTimestamp(`Warning: Failed to save site visit: ${siteVisitError.message}`);
     }
     
     // Отправка уведомления через telegramService

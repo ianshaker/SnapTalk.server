@@ -3,6 +3,7 @@ import { findClientBySiteKey } from './clientCache.js';
 import { savePageEvent } from './database.js';
 import { prepareEventData, logWithTimestamp } from './utils.js';
 import { sendTelegramNotification } from './notifications.js';
+import { saveSiteVisit } from '../../services/telegramService.js';
 
 /**
  * Обработка session tracking событий
@@ -83,6 +84,28 @@ export async function trackSession(req, res) {
     // Сохранение события в базу данных
     const savedEvent = await savePageEvent(eventData);
     logWithTimestamp(`✅ Session event '${eventType}' saved with ID: ${savedEvent.id}`);
+
+    // Сохранение визита в таблицу site_visits для session событий
+    logWithTimestamp(`📊 About to call saveSiteVisit for session event ${eventType}, visitor ${visitorId}`);
+    try {
+      await saveSiteVisit(
+        client.id,
+        visitorId,
+        eventData.request_id,
+        eventData.page_url,
+        {
+          title: eventData.page_title,
+          ref: eventData.referrer,
+          utm: eventData.utm_data
+        },
+        eventData.user_agent,
+        eventData.ip_address
+      );
+      logWithTimestamp(`📊 saveSiteVisit completed successfully for session event ${eventType}, visitor ${visitorId}`);
+    } catch (siteVisitError) {
+      logWithTimestamp(`❌ Failed to save site visit for session event: ${siteVisitError.message}`);
+      logWithTimestamp(`❌ saveSiteVisit error details:`, siteVisitError);
+    }
 
     // Отправка Telegram уведомления для session событий
     if (client.telegram_enabled && ['session_start', 'session_end', 'tab_switch'].includes(eventType)) {
