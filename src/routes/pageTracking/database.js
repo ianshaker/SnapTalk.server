@@ -44,6 +44,7 @@ export async function savePageEvent(eventData) {
     const insertData = {
       client_id: eventData.site_id, // В схеме БД поле называется client_id
       visitor_id: eventData.visitor_id,
+      request_id: eventData.request_id, // request_id должен приходить от fingerprint сервиса
       page_url: eventData.page_url,
       page_path: eventData.page_path || '',
       page_title: eventData.page_title || '',

@@ -56,14 +56,14 @@ export function validateTrackingData(data) {
     }
   }
 
-  // Опциональные поля
-  if (data.requestId !== undefined) {
-    if (typeof data.requestId === 'string') {
-      cleanData.requestId = data.requestId.trim() || null;
-    } else {
-      errors.push('requestId must be a string if provided');
-    }
+  // requestId теперь обязательное поле (приходит от fingerprint сервиса)
+  if (!data.requestId || typeof data.requestId !== 'string' || data.requestId.trim().length === 0) {
+    errors.push('requestId is required and must be a non-empty string (provided by fingerprint service)');
+  } else {
+    cleanData.requestId = data.requestId.trim();
   }
+
+  // Опциональные поля
 
   if (data.clientId !== undefined) {
     if (typeof data.clientId === 'number' || (typeof data.clientId === 'string' && !isNaN(parseInt(data.clientId)))) {

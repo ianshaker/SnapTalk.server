@@ -195,6 +195,7 @@ export function generateWidgetCore() {
           body: JSON.stringify({
             siteKey: API_KEY,
             visitorId: this.visitorId,
+            requestId: this.requestId, // request_id от fingerprint сервиса
             url: url,
             title: title,
             referrer: document.referrer,

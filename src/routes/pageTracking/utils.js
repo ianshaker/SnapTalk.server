@@ -81,7 +81,7 @@ export function prepareEventData(eventData) {
   const preparedData = {
     site_id: eventData.clientId, // database.js ожидает site_id, а не client_id
     visitor_id: eventData.visitorId?.trim() || null,
-    request_id: eventData.requestId?.trim() || null,
+    request_id: eventData.requestId?.trim() || null, // request_id должен приходить от fingerprint сервиса
     page_url: eventData.url?.trim() || null,
     page_path: pagePath,
     page_title: eventData.title?.trim() || null,

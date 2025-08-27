@@ -44,7 +44,7 @@ router.post('/page', async (req, res) => {
       });
     }
     
-    const { siteKey, visitorId, url, title, referrer, userAgent } = req.body;
+    const { siteKey, visitorId, requestId, url, title, referrer, userAgent } = req.body;
     
     // Поиск клиента по siteKey
     const client = await findClientBySiteKey(siteKey);
@@ -62,6 +62,7 @@ router.post('/page', async (req, res) => {
     const eventData = prepareEventData({
       clientId: client.id,
       visitorId,
+      requestId, // request_id от fingerprint сервиса
       url,
       title,
       referrer,
