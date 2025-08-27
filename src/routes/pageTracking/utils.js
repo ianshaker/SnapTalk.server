@@ -79,14 +79,14 @@ export function prepareEventData(eventData) {
   
   // Подготавливаем основные данные
   const preparedData = {
-    client_id: eventData.clientId,
+    site_id: eventData.clientId, // database.js ожидает site_id, а не client_id
     visitor_id: eventData.visitorId?.trim() || null,
     request_id: eventData.requestId?.trim() || null,
     page_url: eventData.url?.trim() || null,
     page_path: pagePath,
     page_title: eventData.title?.trim() || null,
     referrer: eventData.referrer?.trim() || null,
-    ...utmData,
+    utm_data: utmData, // database.js ожидает utm_data как объект
     user_agent: eventData.userAgent?.trim() || null,
     ip_address: eventData.ipAddress?.trim() || null,
     event_timestamp: eventData.timestamp || new Date().toISOString()

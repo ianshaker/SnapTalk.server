@@ -40,9 +40,9 @@ export async function savePageEvent(eventData) {
       throw new Error('Missing required fields: site_id, visitor_id, page_url');
     }
     
-    // Подготовка данных для вставки
+    // Подготовка данных для вставки (схема БД использует client_id, не site_id)
     const insertData = {
-      site_id: eventData.site_id,
+      client_id: eventData.site_id, // В схеме БД поле называется client_id
       visitor_id: eventData.visitor_id,
       page_url: eventData.page_url,
       page_path: eventData.page_path || '',
@@ -50,13 +50,17 @@ export async function savePageEvent(eventData) {
       referrer: eventData.referrer || '',
       user_agent: eventData.user_agent || '',
       ip_address: eventData.ip_address || '',
-      utm_data: eventData.utm_data || {},
-      metadata: eventData.metadata || {},
-      created_at: new Date().toISOString()
+      // UTM поля хранятся отдельно в схеме БД
+      utm_source: eventData.utm_data?.utm_source || null,
+      utm_medium: eventData.utm_data?.utm_medium || null,
+      utm_campaign: eventData.utm_data?.utm_campaign || null,
+      utm_term: eventData.utm_data?.utm_term || null,
+      utm_content: eventData.utm_data?.utm_content || null,
+      event_timestamp: eventData.event_timestamp || new Date().toISOString()
     };
     
     // Логирование попытки сохранения
-    logWithTimestamp(`Saving page event: site_id=${insertData.site_id}, visitor_id=${insertData.visitor_id}, path=${insertData.page_path}`);
+    logWithTimestamp(`Saving page event: client_id=${insertData.client_id}, visitor_id=${insertData.visitor_id}, path=${insertData.page_path}`);
     
     // Вставка данных в таблицу page_events
     const { data, error } = await supabase
@@ -75,13 +79,13 @@ export async function savePageEvent(eventData) {
     }
     
     const savedEvent = data[0];
-    logWithTimestamp(`Page event saved successfully: id=${savedEvent.id}, site_id=${insertData.site_id}`);
+    logWithTimestamp(`Page event saved successfully: id=${savedEvent.id}, client_id=${insertData.client_id}`);
     
     return {
       success: true,
       eventId: savedEvent.id,
       createdAt: savedEvent.created_at,
-      siteId: insertData.site_id,
+      clientId: insertData.client_id,
       visitorId: insertData.visitor_id,
       pagePath: insertData.page_path
     };
@@ -92,7 +96,7 @@ export async function savePageEvent(eventData) {
     return {
       success: false,
       error: error.message,
-      siteId: eventData.site_id,
+      clientId: eventData.site_id,
       visitorId: eventData.visitor_id,
       pagePath: eventData.page_path
     };
@@ -121,8 +125,8 @@ export async function getPageEventStats(siteId, options = {}) {
     // Запрос событий за указанный период
     let query = supabase
       .from('page_events')
-      .select('id, visitor_id, page_path, page_title, created_at, utm_data')
-      .eq('site_id', siteId)
+      .select('id, visitor_id, page_path, page_title, created_at, utm_source, utm_medium, utm_campaign')
+      .eq('client_id', siteId)
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString())
       .order('created_at', { ascending: false });
@@ -158,8 +162,8 @@ export async function getPageEventStats(siteId, options = {}) {
     // UTM статистика
     const utmSources = {};
     data.forEach(event => {
-      if (event.utm_data && event.utm_data.utm_source) {
-        const source = event.utm_data.utm_source;
+      if (event.utm_source) {
+        const source = event.utm_source;
         utmSources[source] = (utmSources[source] || 0) + 1;
       }
     });
@@ -212,7 +216,7 @@ export async function getRecentPageEvents(siteId, limit = 50) {
     const { data, error } = await supabase
       .from('page_events')
       .select('*')
-      .eq('site_id', siteId)
+      .eq('client_id', siteId)
       .order('created_at', { ascending: false })
       .limit(limit);
     
