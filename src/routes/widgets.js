@@ -43,10 +43,8 @@ router.get('/widget.js', async (req, res) => {
       }
     }
 
-    // Генерируем полноценный виджет из Supabase данных  
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 1000);
-    const supabaseClientId = `client-${timestamp}-${random}`;
+    // Используем реальный ID клиента из базы данных
+    const supabaseClientId = client.id;
     
     // Создаем конфигурацию из данных Supabase
     const supabaseConfig = {
@@ -102,7 +100,7 @@ router.get('/widget.js', async (req, res) => {
  * API для получения конфигурации виджета (JSON)
  * GET /widget/config?key=API_KEY
  */
-router.get('/widget/config', (req, res) => {
+router.get('/widget/config', async (req, res) => {
   try {
     const apiKey = req.query.key;
     
@@ -121,9 +119,19 @@ router.get('/widget/config', (req, res) => {
       return res.status(403).json({ error: 'Domain not allowed' });
     }
 
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 1000);
-    const clientId = `client-${timestamp}-${random}`;
+    // Получаем реальный clientId из базы данных
+    const { data: client, error } = await supabaseDB
+      .from('clients')
+      .select('id')
+      .eq('api_key', apiKey)
+      .eq('integration_status', 'active')
+      .single();
+      
+    if (error || !client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+    
+    const clientId = client.id;
 
     res.json({
       clientId,
