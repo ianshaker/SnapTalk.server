@@ -72,7 +72,7 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     const telegramResult = await sendToTopic({
       clientId: client.id,
       text: message,
-      prefix: '🔔 ',
+      prefix: '',
       client: client,
       visitorId: visitorId,
       requestId: eventData.request_id,
