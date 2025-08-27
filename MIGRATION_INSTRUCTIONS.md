@@ -17,7 +17,7 @@
    - Нажмите "New query"
 
 3. **Скопируйте и выполните миграцию**
-   - Откройте файл `SESSION_TRACKING_MIGRATION.sql`
+   - Откройте файл `migrations/SESSION_TRACKING_MIGRATION.sql`
    - Скопируйте весь содержимое файла
    - Вставьте в SQL Editor
    - Нажмите "Run" (или Ctrl/Cmd + Enter)
@@ -87,7 +87,7 @@ AND conname LIKE '%session%' OR conname LIKE '%event_type%';
 
 ### Через psql (если установлен PostgreSQL клиент):
 ```bash
-psql "postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres" -f SESSION_TRACKING_MIGRATION.sql
+psql "postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres" -f migrations/SESSION_TRACKING_MIGRATION.sql
 ```
 
 ### Через Supabase CLI (если установлен):

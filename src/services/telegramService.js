@@ -12,6 +12,7 @@
 
 import axios from 'axios';
 import { BOT_TOKEN, SUPERGROUP_ID, sb } from '../config/env.js';
+import visitorCache from '../utils/cache/VisitorCache.js';
 
 // ===== Хранилище связок clientId <-> topicId =====
 const memoryMap = new Map(); // clientId -> topicId
@@ -85,6 +86,8 @@ export async function findExistingVisitorForClient(clientId, visitorId) {
   }
 }
 
+
+
 // 🆕 Поиск существующего посетителя по visitor_id (БЕЗ client_id!) - для обратной совместимости
 export async function findExistingVisitor(clientId, visitorId) {
   if (!sb || !visitorId) {
@@ -92,7 +95,14 @@ export async function findExistingVisitor(clientId, visitorId) {
     return null;
   }
   
-  try {
+  // Проверяем кэш
+  const cached = visitorCache.getCachedVisitor(visitorId);
+  if (cached) {
+    return cached;
+  }
+  
+  // Используем VisitorCache для обработки с блокировкой
+  return await visitorCache.processWithLock(visitorId, async () => {
     console.log(`🔍 Searching for existing visitor ${visitorId.slice(0,8)}... in client_topics (ANY client)`);
     
     const { data, error } = await sb
@@ -113,10 +123,7 @@ export async function findExistingVisitor(clientId, visitorId) {
     }
     
     return data; // { topic_id, visitor_id, created_at, page_url, client_id } или null
-  } catch (error) {
-    console.error('❌ findExistingVisitor error:', error);
-    return null;
-  }
+  });
 }
 
 // 🆕 Проверка валидности топика в Telegram
@@ -200,6 +207,13 @@ export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId
           console.error('❌ dbSaveTopic update error:', error);
         } else {
           console.log(`✅ dbSaveTopic update success - preserved original topic_id: ${existing.data.topic_id}`);
+          
+          // Обновляем кэш
+          visitorCache.setCachedVisitor(visitorId, {
+            topicId: existing.data.topic_id,
+            clientId: existing.data.client_id,
+            pageUrl: url
+          });
         }
       } else {
         // Создаем новую запись
@@ -214,6 +228,15 @@ export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId
           console.error('❌ Failed topicData:', topicData);
         } else {
           console.log(`✅ dbSaveTopic insert success:`, data);
+          
+          // Добавляем в кэш новую запись
+          if (visitorId) {
+            visitorCache.setCachedVisitor(visitorId, {
+              topicId: topicId,
+              clientId: clientId,
+              pageUrl: url
+            });
+          }
         }
       }
     } else {

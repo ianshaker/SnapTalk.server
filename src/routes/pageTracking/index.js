@@ -6,6 +6,7 @@
  * 
  * Структура API:
  * - POST /api/track/page - основной эндпоинт для трекинга переходов
+ * - POST /api/track/session - эндпоинт для session tracking событий
  * - GET /api/track/status - статус API и диагностика
  * - POST /api/track/cache/refresh - обновление кэша клиентов
  * - POST /api/track/cache/cleanup - очистка антиспам-кэша
@@ -23,6 +24,12 @@ import { sendTelegramNotification, sendTestTelegramNotification, validateTelegra
 import { trackSession } from './session.js';
 
 const router = express.Router();
+
+/**
+ * 🔄 POST /api/track/session
+ * Эндпоинт для session tracking событий (session_start, session_end, tab_switch)
+ */
+router.post('/session', trackSession);
 
 /**
  * 📊 POST /api/track/page
@@ -104,15 +111,23 @@ router.post('/page', async (req, res) => {
     // Отправка Telegram уведомления (асинхронно, не блокируем ответ)
     let telegramResult = { success: false, skipped: true };
     
+    logWithTimestamp(`📊 НАЧИНАЕМ ВЫЗОВ sendTelegramNotification для visitor ${visitorId}`);
+    logWithTimestamp(`📊 Client data:`, JSON.stringify({ id: client.id, site_name: client.site_name }, null, 2));
+    logWithTimestamp(`📊 Event data:`, JSON.stringify(eventData, null, 2));
+    
     try {
+      logWithTimestamp(`📊 Вызываем sendTelegramNotification...`);
       telegramResult = await sendTelegramNotification(client, eventData, visitorId);
+      logWithTimestamp(`📊 sendTelegramNotification ЗАВЕРШЕН. Результат:`, JSON.stringify(telegramResult, null, 2));
+      
       if (telegramResult.success) {
         logWithTimestamp(`Telegram notification sent for visitor ${visitorId}`);
       } else if (!telegramResult.skipped) {
         logWithTimestamp(`Telegram notification failed: ${telegramResult.error}`);
       }
     } catch (telegramError) {
-      logWithTimestamp(`Telegram notification error: ${telegramError.message}`);
+      logWithTimestamp(`❌ ОШИБКА sendTelegramNotification: ${telegramError.message}`);
+      logWithTimestamp(`❌ Stack trace:`, telegramError.stack);
       telegramResult = { success: false, error: telegramError.message };
     }
     
@@ -181,6 +196,7 @@ router.get('/status', async (req, res) => {
       },
       endpoints: {
         'POST /api/track/page': 'Main tracking endpoint',
+        'POST /api/track/session': 'Session tracking endpoint (session_start, session_end, tab_switch)',
         'GET /api/track/status': 'API status and diagnostics',
         'POST /api/track/cache/refresh': 'Refresh client cache',
         'POST /api/track/cache/cleanup': 'Cleanup anti-spam cache',

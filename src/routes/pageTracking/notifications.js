@@ -21,6 +21,12 @@ import { logWithTimestamp } from './utils.js';
  */
 export async function sendTelegramNotification(client, eventData, visitorId) {
   try {
+    // Отладочное логирование типов параметров
+    logWithTimestamp(`🔍 sendTelegramNotification called with:`);
+    logWithTimestamp(`🔍 - client: ${typeof client}`);
+    logWithTimestamp(`🔍 - eventData: ${typeof eventData}`);
+    logWithTimestamp(`🔍 - visitorId: ${typeof visitorId}`, visitorId);
+    
     // Валидация базовых входных данных
     if (!eventData || !visitorId) {
       logWithTimestamp('Telegram notification failed: missing event data or visitor ID');
@@ -39,11 +45,22 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     }
     
     // КРИТИЧЕСКИ ВАЖНО: Сохранение визита в таблицу site_visits ПЕРЕД проверкой Telegram конфигурации
-    logWithTimestamp(`📊 About to call saveSiteVisit for visitor ${visitorId}`);
+    logWithTimestamp(`📊 НАЧИНАЕМ СОХРАНЕНИЕ SITE_VISIT для visitor ${visitorId}`);
+    logWithTimestamp(`📊 Client ID: ${client.id}`);
+    logWithTimestamp(`📊 Event data:`, JSON.stringify(eventData, null, 2));
+    
     try {
+      logWithTimestamp(`📊 Вызываем saveSiteVisit с параметрами:`);
+      logWithTimestamp(`📊 - clientId: ${client.id}`);
+      logWithTimestamp(`📊 - visitorId: ${visitorId}`);
+      logWithTimestamp(`📊 - requestId: ${eventData.request_id}`);
+      logWithTimestamp(`📊 - pageUrl: ${eventData.page_url}`);
+      logWithTimestamp(`📊 - userAgent: ${eventData.user_agent}`);
+      logWithTimestamp(`📊 - ipAddress: ${eventData.ip_address}`);
+      
       await saveSiteVisit(
         client.id,
-        visitorId,
+        visitorId, // Используем visitorId из параметра функции, а не из eventData
         eventData.request_id,
         eventData.page_url,
         {
@@ -54,10 +71,11 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
         eventData.user_agent,
         eventData.ip_address
       );
-      logWithTimestamp(`📊 saveSiteVisit completed successfully for visitor ${visitorId}`);
+      logWithTimestamp(`📊 ✅ saveSiteVisit УСПЕШНО ЗАВЕРШЕН для visitor ${visitorId}`);
     } catch (siteVisitError) {
-      logWithTimestamp(`❌ Failed to save site visit: ${siteVisitError.message}`);
-      logWithTimestamp(`❌ saveSiteVisit error details:`, siteVisitError);
+      logWithTimestamp(`❌ ОШИБКА saveSiteVisit: ${siteVisitError.message}`);
+      logWithTimestamp(`❌ Stack trace:`, siteVisitError.stack);
+      logWithTimestamp(`❌ Полная ошибка:`, siteVisitError);
     }
     
     // Проверка конфигурации Telegram (после сохранения визита)
@@ -117,17 +135,19 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     const eventType = eventData.event_type;
     
     if (eventType === 'tab_switch') {
-      message = formatTabSwitchMessage({
+      const messageResult = formatTabSwitchMessage({
         eventData,
         visitorId,
         sessionDuration: eventData.session_duration
       });
+      message = messageResult.fullMessage;
     } else if (eventType === 'session_end') {
-      message = formatSessionEndMessage({
+      const messageResult = formatSessionEndMessage({
         eventData,
         visitorId,
         sessionDuration: eventData.session_duration
       });
+      message = messageResult.fullMessage;
     } else {
       // Для session_start и page_view используем стандартное форматирование
       const messageResult = formatTelegramMessage({

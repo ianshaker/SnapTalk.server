@@ -64,6 +64,9 @@ app.options('*', cors());
 
 app.use(bodyParser.json({ limit: '1mb' }));
 
+// ===== Статические файлы =====
+app.use(express.static('.'));
+
 // ===== Маршруты API =====
 app.use('/api/snaptalk', snapTalkRoutes);
 app.use('/api', widgetRoutes);

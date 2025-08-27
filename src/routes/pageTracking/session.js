@@ -90,7 +90,7 @@ export async function trackSession(req, res) {
     try {
       await saveSiteVisit(
         client.id,
-        visitorId,
+        visitorId, // Используем исходный visitorId из req.body
         eventData.request_id,
         eventData.page_url,
         {
@@ -108,9 +108,18 @@ export async function trackSession(req, res) {
     }
 
     // Отправка Telegram уведомления для session событий
-    if (client.telegram_enabled && ['session_start', 'session_end', 'tab_switch'].includes(eventType)) {
+    if (client.telegram_bot_token && client.telegram_group_id && ['session_start', 'session_end', 'tab_switch'].includes(eventType)) {
       try {
-        await sendTelegramNotification(client, eventData, savedEvent);
+        // Отладочное логирование перед вызовом sendTelegramNotification
+        logWithTimestamp(`🔍 About to call sendTelegramNotification with:`);
+        logWithTimestamp(`🔍 - visitorId type: ${typeof visitorId}`);
+        logWithTimestamp(`🔍 - visitorId value:`, visitorId);
+        logWithTimestamp(`🔍 - eventData.visitor_id:`, eventData.visitor_id);
+        
+        // Создаем копию eventData с правильным visitorId для Telegram уведомлений
+        const telegramEventData = { ...eventData, visitor_id: visitorId };
+        logWithTimestamp(`🔍 - telegramEventData.visitor_id:`, telegramEventData.visitor_id);
+        await sendTelegramNotification(client, telegramEventData, visitorId);
         logWithTimestamp(`📱 Telegram notification sent for ${eventType}`);
       } catch (telegramError) {
         logWithTimestamp(`❌ Telegram notification failed: ${telegramError.message}`);

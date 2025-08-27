@@ -1,8 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-// Load environment variables from .env file
-dotenv.config();
+// Get the directory of this file and find .env in project root
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = join(__dirname, '..', '..');
+
+// Load environment variables from .env file in project root
+dotenv.config({ path: join(projectRoot, '.env') });
 
 // Environment variables
 export const PORT = process.env.PORT || 3000;
@@ -19,6 +26,7 @@ export const allowedOrigins = [
   'https://savov.lovable.app',
   'https://snaptalk.lovable.app',
   'http://localhost:5173', // для разработки
+  'http://localhost:3000', // для тестовой страницы
   // Lovable sandbox домены
   'https://61b20835-88ce-4d70-ae0d-161637c5d5b4.sandbox.lovable.dev'
 ];

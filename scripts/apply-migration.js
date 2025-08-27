@@ -4,14 +4,14 @@
  */
 
 import { readFileSync } from 'fs';
-import { supabaseDB } from './src/config/supabase.js';
+import { supabaseDB } from '../src/config/supabase.js';
 
 async function applyMigration() {
   try {
     console.log('🔄 Применение миграции SESSION_TRACKING_MIGRATION.sql...');
     
     // Читаем SQL файл
-    const migrationSQL = readFileSync('./SESSION_TRACKING_MIGRATION.sql', 'utf8');
+    const migrationSQL = readFileSync('../migrations/SESSION_TRACKING_MIGRATION.sql', 'utf8');
     
     // Разбиваем на отдельные команды (по точке с запятой)
     const commands = migrationSQL
@@ -84,7 +84,7 @@ async function applyMigration() {
     console.error('❌ Ошибка применения миграции:', error.message);
     console.log('\n🔧 Альтернативный способ:');
     console.log('1. Откройте Supabase Dashboard -> SQL Editor');
-    console.log('2. Скопируйте содержимое SESSION_TRACKING_MIGRATION.sql');
+    console.log('2. Скопируйте содержимое migrations/SESSION_TRACKING_MIGRATION.sql');
     console.log('3. Выполните SQL команды вручную');
     process.exit(1);
   }

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Session Events</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.visible {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.hidden {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Test Session Events</h1>
+        <p>Эта страница тестирует session tracking события виджета SnapTalk.</p>
+        
+        <div id="visibility-status" class="status visible">
+            📍 Страница видима
+        </div>
+        
+        <div>
+            <button class="button" onclick="simulateTabSwitch()">🔄 Симулировать переключение вкладки</button>
+            <button class="button" onclick="simulateSessionEnd()">🛑 Симулировать завершение сессии</button>
+            <button class="button" onclick="simulateTabHidden()">👁️‍🗨️ Имитировать скрытие вкладки</button>
+            <button class="button" onclick="simulateTabVisible()">👁️ Имитировать показ вкладки</button>
+            <button class="button" onclick="simulatePageClose()">❌ Имитировать закрытие страницы</button>
+            <button class="button" onclick="clearLog()">🗑️ Очистить лог</button>
+        </div>
+        
+        <div id="console-log" class="log">Лог событий появится здесь...
+</div>
+    </div>
+
+    <!-- Подключаем SnapTalk виджет -->
+    <script src="http://localhost:3000/api/widget.js?key=snaptalk_cwj09fmbtzo_1756137141423" async></script>
+    
+    <script>
+        let logElement = document.getElementById('console-log');
+        let statusElement = document.getElementById('visibility-status');
+        
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            logElement.textContent = 'Лог очищен...\n';
+        }
+        
+        // Отслеживание реальных событий visibilitychange
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                statusElement.textContent = '🔴 Страница скрыта';
+                statusElement.className = 'status hidden';
+                addLog('🔴 REAL EVENT: Page hidden (visibilitychange)');
+            } else {
+                statusElement.textContent = '🟢 Страница видима';
+                statusElement.className = 'status visible';
+                addLog('🟢 REAL EVENT: Page visible (visibilitychange)');
+            }
+        });
+        
+        // Симуляция переключения вкладки
+        function simulateTabSwitch() {
+            addLog('🔄 SIMULATING: Tab switch event');
+            
+            // Проверяем, есть ли виджет
+            if (window.SnapTalkWidget && window.SnapTalkWidget.sessionTracker) {
+                window.SnapTalkWidget.sessionTracker.trackSessionEvent('tab_switch', { action: 'simulated' });
+                addLog('✅ WIDGET: trackSessionEvent called for tab_switch');
+            } else {
+                addLog('❌ ERROR: SnapTalk widget not found or sessionTracker missing');
+            }
+        }
+        
+        // Имитация скрытия вкладки через Visibility API
+        function simulateTabHidden() {
+            addLog('👁️‍🗨️ SIMULATING: Tab hidden (visibility API)');
+            
+            // Создаем искусственное событие visibilitychange
+            Object.defineProperty(document, 'hidden', {
+                value: true,
+                writable: true,
+                configurable: true
+            });
+            
+            Object.defineProperty(document, 'visibilityState', {
+                value: 'hidden',
+                writable: true,
+                configurable: true
+            });
+            
+            // Диспатчим событие
+            const event = new Event('visibilitychange');
+            document.dispatchEvent(event);
+            
+            addLog('✅ SIMULATED: visibilitychange event dispatched (hidden)');
+        }
+        
+        // Имитация показа вкладки через Visibility API
+        function simulateTabVisible() {
+            addLog('👁️ SIMULATING: Tab visible (visibility API)');
+            
+            // Создаем искусственное событие visibilitychange
+            Object.defineProperty(document, 'hidden', {
+                value: false,
+                writable: true,
+                configurable: true
+            });
+            
+            Object.defineProperty(document, 'visibilityState', {
+                value: 'visible',
+                writable: true,
+                configurable: true
+            });
+            
+            // Диспатчим событие
+            const event = new Event('visibilitychange');
+            document.dispatchEvent(event);
+            
+            addLog('✅ SIMULATED: visibilitychange event dispatched (visible)');
+        }
+        
+        // Имитация закрытия страницы
+        function simulatePageClose() {
+            addLog('❌ SIMULATING: Page close (beforeunload)');
+            
+            // Диспатчим событие beforeunload
+            const beforeUnloadEvent = new Event('beforeunload');
+            window.dispatchEvent(beforeUnloadEvent);
+            
+            addLog('✅ SIMULATED: beforeunload event dispatched');
+            
+            // Также можем симулировать pagehide
+            setTimeout(() => {
+                const pageHideEvent = new Event('pagehide');
+                window.dispatchEvent(pageHideEvent);
+                addLog('✅ SIMULATED: pagehide event dispatched');
+            }, 100);
+        }
+        
+        // Симуляция завершения сессии
+        function simulateSessionEnd() {
+            addLog('🛑 SIMULATING: Session end event');
+            
+            // Проверяем, есть ли виджет
+            if (window.SnapTalkWidget && window.SnapTalkWidget.sessionTracker) {
+                window.SnapTalkWidget.sessionTracker.trackSessionEvent('session_end', { reason: 'manual_test' });
+                addLog('✅ WIDGET: trackSessionEvent called for session_end');
+            } else {
+                addLog('❌ ERROR: SnapTalk widget not found or sessionTracker missing');
+            }
+        }
+        
+        // Логирование загрузки виджета
+        window.addEventListener('load', function() {
+            addLog('📄 PAGE: Loaded');
+            
+            // Проверяем виджет через 3 секунды
+            setTimeout(function() {
+                if (window.SnapTalkWidget) {
+                    addLog('✅ WIDGET: SnapTalk widget loaded successfully');
+                    addLog(`📊 WIDGET: visitorId = ${window.SnapTalkWidget.visitorId || 'not set'}`);
+                    
+                    if (window.SnapTalkWidget.sessionTracker) {
+                        const sessionStatus = window.SnapTalkWidget.sessionTracker.getSessionStatus();
+                        addLog(`📊 SESSION: isActive = ${sessionStatus.isActive}`);
+                        addLog(`📊 SESSION: duration = ${sessionStatus.duration}ms`);
+                    } else {
+                        addLog('❌ ERROR: sessionTracker not found in widget');
+                    }
+                } else {
+                    addLog('❌ ERROR: SnapTalk widget not loaded after 3 seconds');
+                }
+            }, 3000);
+        });
+        
+        addLog('🚀 Test page initialized');
+    </script>
+</body>
+</html>

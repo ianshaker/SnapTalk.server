@@ -78,9 +78,14 @@ export function prepareEventData(eventData) {
   }
   
   // Подготавливаем основные данные
+  // Проверяем тип visitorId для отладки
+  if (eventData.visitorId && typeof eventData.visitorId !== 'string') {
+    console.log('⚠️ WARNING: visitorId is not a string:', typeof eventData.visitorId, eventData.visitorId);
+  }
+  
   const preparedData = {
     site_id: eventData.clientId, // database.js ожидает site_id, а не client_id
-    visitor_id: eventData.visitorId?.trim() || null,
+    visitor_id: typeof eventData.visitorId === 'string' ? eventData.visitorId.trim() : eventData.visitorId,
     request_id: eventData.requestId?.trim() || null, // request_id должен приходить от fingerprint сервиса
     page_url: eventData.url?.trim() || null,
     page_path: pagePath,

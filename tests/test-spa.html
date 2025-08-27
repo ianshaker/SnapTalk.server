@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPA Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .nav {
+            margin-bottom: 30px;
+        }
+        .nav button {
+            margin-right: 10px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .nav button:hover {
+            background: #0056b3;
+        }
+        .content {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            min-height: 200px;
+        }
+        .logs {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>SPA Page Tracking Test</h1>
+    
+    <div class="nav">
+        <button onclick="navigateTo('/')">Home</button>
+        <button onclick="navigateTo('/about')">About</button>
+        <button onclick="navigateTo('/products')">Products</button>
+        <button onclick="navigateTo('/contact')">Contact</button>
+        <button onclick="navigateTo('/blog/article-1')">Blog Article</button>
+        <br><br>
+        <button onclick="autoTest()" style="background: #28a745;">🤖 Авто-тест (с задержками)</button>
+        <button onclick="fastTest()" style="background: #dc3545;">⚡ Быстрый тест (race condition)</button>
+        <br><br>
+        <strong>Тестирование сессий и вкладок:</strong><br>
+        <button onclick="simulateTabHidden()" style="background: #6f42c1;">📱 Имитация скрытия вкладки</button>
+        <button onclick="simulateTabVisible()" style="background: #20c997;">👁️ Имитация показа вкладки</button>
+        <button onclick="simulatePageClose()" style="background: #fd7e14;">❌ Имитация закрытия страницы</button>
+        <button onclick="simulateTabSwitch()" style="background: #e83e8c;">🔄 Переключение вкладки</button>
+        <button onclick="simulateSessionEnd()" style="background: #6c757d;">⏹️ Завершение сессии</button>
+    </div>
+    
+    <div class="content" id="content">
+        <h2>Welcome to Home Page</h2>
+        <p>This is a test SPA to verify automatic page tracking functionality.</p>
+        <p>Current URL: <span id="current-url"></span></p>
+        <p>Page Title: <span id="page-title"></span></p>
+    </div>
+    
+    <div class="logs" id="logs">
+        <strong>Console Logs:</strong><br>
+    </div>
+    
+    <!-- SnapTalk Widget -->
+    <script src="http://localhost:3000/api/widget.js?key=snaptalk_cwj09fmbtzo_1756137141423"></script>
+    
+    <script>
+        // Перехват console.log для отображения в интерфейсе
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const logsDiv = document.getElementById('logs');
+        
+        function addLog(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = type === 'warn' ? '#ff6b35' : type === 'error' ? '#dc3545' : '#333';
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog(args.join(' '), 'log');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog(args.join(' '), 'warn');
+        };
+        
+        // Переменная для отслеживания последнего времени навигации
+        let lastNavigationTime = 0;
+        const NAVIGATION_DELAY = 1500; // 1.5 секунды задержка между переходами
+        
+        // Симуляция SPA навигации с реалистичной задержкой
+        function navigateTo(path) {
+            const now = Date.now();
+            const timeSinceLastNavigation = now - lastNavigationTime;
+            
+            // Если прошло меньше времени, чем задержка, показываем предупреждение
+            if (timeSinceLastNavigation < NAVIGATION_DELAY && lastNavigationTime > 0) {
+                addLog(`⚠️ Слишком быстрая навигация! Подождите ${Math.ceil((NAVIGATION_DELAY - timeSinceLastNavigation) / 1000)} сек.`, 'warn');
+                return;
+            }
+            
+            lastNavigationTime = now;
+            
+            // Обновляем URL без перезагрузки страницы
+            history.pushState({}, '', path);
+            
+            // Обновляем контент страницы
+            updatePageContent(path);
+            
+            // Обновляем заголовок
+            updatePageTitle(path);
+            
+            addLog(`🔄 SPA Navigation to: ${path}`, 'log');
+            
+            // Отслеживаем переход страницы через PageTracker
+            setTimeout(() => {
+                if (window.SnapTalkWidget && window.SnapTalkWidget.pageTracker) {
+                    window.SnapTalkWidget.pageTracker.trackPageView();
+                    addLog(`📄 Page view tracked for: ${path}`, 'log');
+                } else {
+                    addLog('⚠️ PageTracker недоступен для отслеживания перехода', 'warn');
+                    if (window.SnapTalkWidget) {
+                        addLog(`PageTracker доступен: ${!!window.SnapTalkWidget.pageTracker}`, 'log');
+                    }
+                }
+            }, 100);
+        }
+        
+        function updatePageContent(path) {
+            const content = document.getElementById('content');
+            const currentUrl = document.getElementById('current-url');
+            const pageTitle = document.getElementById('page-title');
+            
+            let title, description;
+            
+            switch(path) {
+                case '/':
+                    title = 'Welcome to Home Page';
+                    description = 'This is a test SPA to verify automatic page tracking functionality.';
+                    break;
+                case '/about':
+                    title = 'About Us';
+                    description = 'Learn more about our company and mission.';
+                    break;
+                case '/products':
+                    title = 'Our Products';
+                    description = 'Explore our amazing product catalog.';
+                    break;
+                case '/contact':
+                    title = 'Contact Us';
+                    description = 'Get in touch with our team.';
+                    break;
+                case '/blog/article-1':
+                    title = 'Blog Article: SPA Tracking';
+                    description = 'Deep dive into Single Page Application tracking techniques.';
+                    break;
+                default:
+                    title = 'Page Not Found';
+                    description = 'The requested page could not be found.';
+            }
+            
+            content.innerHTML = `
+                <h2>${title}</h2>
+                <p>${description}</p>
+                <p>Current URL: <span id="current-url">${window.location.href}</span></p>
+                <p>Page Title: <span id="page-title">${document.title}</span></p>
+            `;
+        }
+        
+        function updatePageTitle(path) {
+            let title;
+            switch(path) {
+                case '/':
+                    title = 'SPA Test - Home';
+                    break;
+                case '/about':
+                    title = 'SPA Test - About';
+                    break;
+                case '/products':
+                    title = 'SPA Test - Products';
+                    break;
+                case '/contact':
+                    title = 'SPA Test - Contact';
+                    break;
+                case '/blog/article-1':
+                    title = 'SPA Test - Blog Article';
+                    break;
+                default:
+                    title = 'SPA Test - 404';
+            }
+            document.title = title;
+        }
+        
+        // Обработка браузерной навигации (назад/вперед)
+        window.addEventListener('popstate', function(event) {
+            updatePageContent(window.location.pathname);
+            updatePageTitle(window.location.pathname);
+            addLog(`⬅️ Browser navigation to: ${window.location.pathname}`, 'log');
+        });
+        
+        // Автоматическое тестирование с правильными задержками
+        async function autoTest() {
+            addLog('🤖 Начинаем авто-тест с реалистичными задержками...', 'log');
+            const pages = ['/', '/about', '/products', '/contact', '/blog/article-1'];
+            
+            for (let i = 0; i < pages.length; i++) {
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 2 секунды между переходами
+                navigateTo(pages[i]);
+                addLog(`✅ Переход ${i + 1}/${pages.length}: ${pages[i]}`, 'log');
+            }
+            
+            addLog('🎉 Авто-тест завершен!', 'log');
+        }
+        
+        // Быстрое тестирование для демонстрации race condition
+        async function fastTest() {
+            addLog('⚡ Начинаем быстрый тест (race condition)...', 'warn');
+            const pages = ['/', '/about', '/products'];
+            
+            // Сбрасываем ограничение времени для демонстрации проблемы
+            const originalDelay = NAVIGATION_DELAY;
+            window.NAVIGATION_DELAY = 0;
+            
+            for (let i = 0; i < pages.length; i++) {
+                // Принудительная навигация без проверки времени
+                history.pushState({}, '', pages[i]);
+                updatePageContent(pages[i]);
+                updatePageTitle(pages[i]);
+                addLog(`⚡ Быстрый переход ${i + 1}: ${pages[i]}`, 'warn');
+                
+                // Очень маленькая задержка (50ms)
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            
+            // Восстанавливаем ограничение
+            window.NAVIGATION_DELAY = originalDelay;
+            addLog('⚠️ Быстрый тест завершен - проверьте Telegram на дубликаты!', 'warn');
+        }
+        
+        // Функции для тестирования сессий и вкладок
+        function simulateTabHidden() {
+            addLog('📱 Имитация скрытия вкладки (visibilitychange: hidden)', 'log');
+            try {
+                // Безопасная имитация изменения visibilityState
+                const originalVisibilityState = document.visibilityState;
+                const originalHidden = document.hidden;
+                
+                // Создаем кастомное событие с данными
+                const event = new Event('visibilitychange');
+                Object.defineProperty(event, 'target', {
+                    value: {
+                        visibilityState: 'hidden',
+                        hidden: true
+                    }
+                });
+                
+                // Временно изменяем свойства для обработчиков
+                Object.defineProperty(document, 'visibilityState', {
+                    configurable: true,
+                    value: 'hidden'
+                });
+                Object.defineProperty(document, 'hidden', {
+                    configurable: true,
+                    value: true
+                });
+                
+                document.dispatchEvent(event);
+                
+                // Восстанавливаем оригинальные значения
+                setTimeout(() => {
+                    Object.defineProperty(document, 'visibilityState', {
+                        configurable: true,
+                        value: originalVisibilityState
+                    });
+                    Object.defineProperty(document, 'hidden', {
+                        configurable: true,
+                        value: originalHidden
+                    });
+                }, 100);
+            } catch (error) {
+                addLog(`⚠️ Ошибка при имитации скрытия вкладки: ${error.message}`, 'warn');
+            }
+        }
+        
+        function simulateTabVisible() {
+            addLog('👁️ Имитация показа вкладки (visibilitychange: visible)', 'log');
+            try {
+                // Безопасная имитация изменения visibilityState
+                const originalVisibilityState = document.visibilityState;
+                const originalHidden = document.hidden;
+                
+                // Создаем кастомное событие с данными
+                const event = new Event('visibilitychange');
+                Object.defineProperty(event, 'target', {
+                    value: {
+                        visibilityState: 'visible',
+                        hidden: false
+                    }
+                });
+                
+                // Временно изменяем свойства для обработчиков
+                Object.defineProperty(document, 'visibilityState', {
+                    configurable: true,
+                    value: 'visible'
+                });
+                Object.defineProperty(document, 'hidden', {
+                    configurable: true,
+                    value: false
+                });
+                
+                document.dispatchEvent(event);
+                
+                // Восстанавливаем оригинальные значения
+                setTimeout(() => {
+                    Object.defineProperty(document, 'visibilityState', {
+                        configurable: true,
+                        value: originalVisibilityState
+                    });
+                    Object.defineProperty(document, 'hidden', {
+                        configurable: true,
+                        value: originalHidden
+                    });
+                }, 100);
+            } catch (error) {
+                addLog(`⚠️ Ошибка при имитации показа вкладки: ${error.message}`, 'warn');
+            }
+        }
+        
+        function simulatePageClose() {
+            addLog('❌ Имитация закрытия страницы (beforeunload + pagehide)', 'log');
+            // Сначала beforeunload
+            const beforeUnloadEvent = new Event('beforeunload');
+            window.dispatchEvent(beforeUnloadEvent);
+            
+            // Затем pagehide
+            setTimeout(() => {
+                const pageHideEvent = new Event('pagehide');
+                window.dispatchEvent(pageHideEvent);
+            }, 100);
+        }
+        
+        function simulateTabSwitch() {
+            addLog('🔄 Имитация переключения вкладки (tab_switch event)', 'log');
+            // Ждем загрузки виджета
+            setTimeout(() => {
+                if (window.SnapTalkWidget && window.SnapTalkWidget.sessionTracker) {
+                    window.SnapTalkWidget.sessionTracker.trackSessionEvent('tab_switch');
+                    addLog('✅ Tab switch event отправлен', 'log');
+                } else {
+                    addLog('⚠️ SessionTracker не найден. Проверяем доступность виджета...', 'warn');
+                    addLog(`Widget доступен: ${!!window.SnapTalkWidget}`, 'log');
+                    if (window.SnapTalkWidget) {
+                        addLog(`SessionTracker доступен: ${!!window.SnapTalkWidget.sessionTracker}`, 'log');
+                        addLog(`Все свойства виджета: ${Object.keys(window.SnapTalkWidget).join(', ')}`, 'log');
+                    }
+                }
+            }, 1000);
+        }
+        
+        function simulateSessionEnd() {
+            addLog('⏹️ Имитация завершения сессии (session_end event)', 'log');
+            // Ждем загрузки виджета
+            setTimeout(() => {
+                if (window.SnapTalkWidget && window.SnapTalkWidget.sessionTracker) {
+                    window.SnapTalkWidget.sessionTracker.trackSessionEvent('session_end');
+                    addLog('✅ Session end event отправлен', 'log');
+                } else {
+                    addLog('⚠️ SessionTracker не найден. Проверяем доступность виджета...', 'warn');
+                    addLog(`Widget доступен: ${!!window.SnapTalkWidget}`, 'log');
+                    if (window.SnapTalkWidget) {
+                        addLog(`SessionTracker доступен: ${!!window.SnapTalkWidget.sessionTracker}`, 'log');
+                        addLog(`Все свойства виджета: ${Object.keys(window.SnapTalkWidget).join(', ')}`, 'log');
+                    }
+                }
+            }, 1000);
+        }
+        
+        // Отслеживание реальных событий visibilitychange
+        document.addEventListener('visibilitychange', function() {
+            const state = document.visibilityState;
+            addLog(`🔍 Реальное событие visibilitychange: ${state}`, 'log');
+        });
+        
+        // Отслеживание событий beforeunload и pagehide
+        window.addEventListener('beforeunload', function(e) {
+            addLog('🚪 Реальное событие beforeunload', 'log');
+        });
+        
+        window.addEventListener('pagehide', function(e) {
+            addLog('👋 Реальное событие pagehide', 'log');
+        });
+        
+        // Функция для отображения статуса сессии
+        function displaySessionStatus() {
+            if (window.SnapTalkWidget && window.SnapTalkWidget.sessionTracker) {
+                try {
+                    const status = window.SnapTalkWidget.sessionTracker.getSessionStatus();
+                    addLog(`📊 Статус сессии: активна=${status.isActive}, длительность=${Math.round(status.duration/1000)}с`, 'log');
+                } catch (error) {
+                    addLog(`⚠️ Ошибка получения статуса сессии: ${error.message}`, 'warn');
+                }
+            } else {
+                // Более детальная диагностика
+                if (!window.SnapTalkWidget) {
+                    addLog('⚠️ SnapTalkWidget не загружен', 'warn');
+                } else if (!window.SnapTalkWidget.sessionTracker) {
+                    addLog('⚠️ SessionTracker не инициализирован в виджете', 'warn');
+                    addLog(`Доступные свойства виджета: ${Object.keys(window.SnapTalkWidget).join(', ')}`, 'log');
+                }
+            }
+        }
+        
+        // Показываем статус сессии каждые 10 секунд
+        setInterval(displaySessionStatus, 10000);
+        
+        // Инициализация
+        updatePageContent(window.location.pathname);
+        updatePageTitle(window.location.pathname);
+        
+        addLog('🚀 SPA Test Page initialized', 'log');
+        
+        // Показываем начальный статус сессии через 3 секунды (после загрузки виджета)
+        setTimeout(() => {
+            displaySessionStatus();
+            // Проверяем доступность всех компонентов виджета
+            if (window.SnapTalkWidget) {
+                addLog(`🔧 Диагностика виджета:`, 'log');
+                addLog(`- TrackingService: ${!!window.SnapTalkWidget.trackingService}`, 'log');
+                addLog(`- PageTracker: ${!!window.SnapTalkWidget.pageTracker}`, 'log');
+                addLog(`- SessionTracker: ${!!window.SnapTalkWidget.sessionTracker}`, 'log');
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
