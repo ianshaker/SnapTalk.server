@@ -35,7 +35,7 @@ router.post('/page', async (req, res) => {
     
     // Валидация входных данных
     const validation = validateTrackingData(req.body);
-    if (!validation.valid) {
+    if (!validation.isValid) {
       logWithTimestamp(`Validation failed: ${validation.errors.join(', ')}`);
       return res.status(400).json({
         success: false,
@@ -60,7 +60,7 @@ router.post('/page', async (req, res) => {
     
     // Подготовка данных события
     const eventData = prepareEventData({
-      siteId: client.id,
+      clientId: client.id,
       visitorId,
       url,
       title,

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPA Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .nav {
+            margin-bottom: 30px;
+        }
+        .nav button {
+            margin-right: 10px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .nav button:hover {
+            background: #0056b3;
+        }
+        .content {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            min-height: 200px;
+        }
+        .logs {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>SPA Page Tracking Test</h1>
+    
+    <div class="nav">
+        <button onclick="navigateTo('/')">Home</button>
+        <button onclick="navigateTo('/about')">About</button>
+        <button onclick="navigateTo('/products')">Products</button>
+        <button onclick="navigateTo('/contact')">Contact</button>
+        <button onclick="navigateTo('/blog/article-1')">Blog Article</button>
+    </div>
+    
+    <div class="content" id="content">
+        <h2>Welcome to Home Page</h2>
+        <p>This is a test SPA to verify automatic page tracking functionality.</p>
+        <p>Current URL: <span id="current-url"></span></p>
+        <p>Page Title: <span id="page-title"></span></p>
+    </div>
+    
+    <div class="logs" id="logs">
+        <strong>Console Logs:</strong><br>
+    </div>
+    
+    <!-- SnapTalk Widget -->
+    <script src="http://localhost:3000/api/widget.js?key=snaptalk_cwj09fmbtzo_1756137141423"></script>
+    
+    <script>
+        // Перехват console.log для отображения в интерфейсе
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const logsDiv = document.getElementById('logs');
+        
+        function addLog(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = type === 'warn' ? '#ff6b35' : type === 'error' ? '#dc3545' : '#333';
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog(args.join(' '), 'log');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog(args.join(' '), 'warn');
+        };
+        
+        // Симуляция SPA навигации
+        function navigateTo(path) {
+            // Обновляем URL без перезагрузки страницы
+            history.pushState({}, '', path);
+            
+            // Обновляем контент страницы
+            updatePageContent(path);
+            
+            // Обновляем заголовок
+            updatePageTitle(path);
+            
+            addLog(`🔄 Navigated to: ${path}`, 'log');
+        }
+        
+        function updatePageContent(path) {
+            const content = document.getElementById('content');
+            const currentUrl = document.getElementById('current-url');
+            const pageTitle = document.getElementById('page-title');
+            
+            let title, description;
+            
+            switch(path) {
+                case '/':
+                    title = 'Welcome to Home Page';
+                    description = 'This is a test SPA to verify automatic page tracking functionality.';
+                    break;
+                case '/about':
+                    title = 'About Us';
+                    description = 'Learn more about our company and mission.';
+                    break;
+                case '/products':
+                    title = 'Our Products';
+                    description = 'Explore our amazing product catalog.';
+                    break;
+                case '/contact':
+                    title = 'Contact Us';
+                    description = 'Get in touch with our team.';
+                    break;
+                case '/blog/article-1':
+                    title = 'Blog Article: SPA Tracking';
+                    description = 'Deep dive into Single Page Application tracking techniques.';
+                    break;
+                default:
+                    title = 'Page Not Found';
+                    description = 'The requested page could not be found.';
+            }
+            
+            content.innerHTML = `
+                <h2>${title}</h2>
+                <p>${description}</p>
+                <p>Current URL: <span id="current-url">${window.location.href}</span></p>
+                <p>Page Title: <span id="page-title">${document.title}</span></p>
+            `;
+        }
+        
+        function updatePageTitle(path) {
+            let title;
+            switch(path) {
+                case '/':
+                    title = 'SPA Test - Home';
+                    break;
+                case '/about':
+                    title = 'SPA Test - About';
+                    break;
+                case '/products':
+                    title = 'SPA Test - Products';
+                    break;
+                case '/contact':
+                    title = 'SPA Test - Contact';
+                    break;
+                case '/blog/article-1':
+                    title = 'SPA Test - Blog Article';
+                    break;
+                default:
+                    title = 'SPA Test - 404';
+            }
+            document.title = title;
+        }
+        
+        // Обработка браузерной навигации (назад/вперед)
+        window.addEventListener('popstate', function(event) {
+            updatePageContent(window.location.pathname);
+            updatePageTitle(window.location.pathname);
+            addLog(`⬅️ Browser navigation to: ${window.location.pathname}`, 'log');
+        });
+        
+        // Инициализация
+        updatePageContent(window.location.pathname);
+        updatePageTitle(window.location.pathname);
+        
+        addLog('🚀 SPA Test Page initialized', 'log');
+    </script>
+</body>
+</html>

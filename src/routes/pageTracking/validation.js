@@ -42,14 +42,17 @@ export function validateTrackingData(data) {
     }
   }
 
-  if (!data.path || typeof data.path !== 'string' || data.path.trim().length === 0) {
-    errors.push('path is required and must be a non-empty string');
-  } else {
-    cleanData.path = data.path.trim();
-    
-    // Валидация пути (должен начинаться с /)
-    if (!cleanData.path.startsWith('/')) {
-      cleanData.path = '/' + cleanData.path;
+  // path не обязательное поле - извлекается из URL в prepareEventData
+  if (data.path !== undefined) {
+    if (typeof data.path === 'string') {
+      cleanData.path = data.path.trim();
+      
+      // Валидация пути (должен начинаться с /)
+      if (cleanData.path && !cleanData.path.startsWith('/')) {
+        cleanData.path = '/' + cleanData.path;
+      }
+    } else {
+      errors.push('path must be a string if provided');
     }
   }
 

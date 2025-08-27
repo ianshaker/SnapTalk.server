@@ -13,6 +13,7 @@ export function generateWidgetCore() {
       
       this.initFingerprint();
       this.init();
+      this.initPageTracking();
     }
     
     init() {
@@ -177,6 +178,83 @@ export function generateWidgetCore() {
         }
       } catch (error) {
         console.warn('⚠️ Visit tracking error:', error);
+      }
+    }
+    
+    // Автоматический трекинг переходов страниц для SPA
+    async trackPageView(url = window.location.href, title = document.title) {
+      if (!this.visitorId) {
+        console.warn('⚠️ Cannot track page view: visitorId not available');
+        return;
+      }
+      
+      try {
+        const response = await fetch(SERVER_URL + '/api/track/page', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            siteKey: API_KEY,
+            visitorId: this.visitorId,
+            url: url,
+            title: title,
+            referrer: document.referrer,
+            userAgent: navigator.userAgent
+          })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('📄 Page view tracked successfully:', result);
+        } else {
+          console.warn('⚠️ Page view tracking failed:', response.status);
+        }
+      } catch (error) {
+        console.warn('⚠️ Page view tracking error:', error);
+      }
+    }
+    
+    // Инициализация отслеживания переходов страниц в SPA
+    initPageTracking() {
+      // Отслеживание начальной загрузки страницы
+      if (document.readyState === 'complete') {
+        setTimeout(() => this.trackInitialPageView(), 2000);
+      } else {
+        window.addEventListener('load', () => {
+          setTimeout(() => this.trackInitialPageView(), 2000);
+        });
+      }
+      
+      // Monkey-patch History API для отслеживания SPA переходов
+      const originalPushState = history.pushState;
+      const originalReplaceState = history.replaceState;
+      
+      history.pushState = (...args) => {
+        originalPushState.apply(history, args);
+        setTimeout(() => this.handleSPANavigation(), 100);
+      };
+      
+      history.replaceState = (...args) => {
+        originalReplaceState.apply(history, args);
+        setTimeout(() => this.handleSPANavigation(), 100);
+      };
+      
+      // Отслеживание браузерной навигации (назад/вперед)
+      window.addEventListener('popstate', () => {
+        setTimeout(() => this.handleSPANavigation(), 100);
+      });
+    }
+    
+    // Трекинг начальной загрузки страницы
+    async trackInitialPageView() {
+      if (this.visitorId) {
+        await this.trackPageView();
+      }
+    }
+    
+    // Обработка SPA навигации
+    async handleSPANavigation() {
+      if (this.visitorId) {
+        await this.trackPageView();
       }
     }
     
