@@ -250,10 +250,14 @@ function formatVisitMessage(client, visitorId, url, meta) {
     second: '2-digit'
   });
 
-  let message = `${url}\n`;
+  let message = `\`${url}\`\n`;
   message += `Visitor ID: ${visitorId}\n`;
-  message += `${meta?.title || ''}\n\n`;
-  message += `${timestamp}\n\n`;
+  if (meta?.title && meta.title.trim()) {
+    message += `${meta.title}\n\n`;
+  } else {
+    message += `\n`;
+  }
+  message += `${timestamp}`;
   
   return message;
 }
@@ -270,10 +274,14 @@ function formatReturnVisitMessage(client, visitorId, url, meta, previousUrl, fir
     second: '2-digit'
   });
 
-  let message = `${url}\n`;
+  let message = `\`${url}\`\n`;
   message += `Visitor ID: ${visitorId}\n`;
-  message += `${meta?.title || ''}\n\n`;
-  message += `${timestamp}\n\n`;
+  if (meta?.title && meta.title.trim()) {
+    message += `${meta.title}\n\n`;
+  } else {
+    message += `\n`;
+  }
+  message += `${timestamp}`;
   
   return message;
 }

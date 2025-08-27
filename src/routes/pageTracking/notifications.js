@@ -139,29 +139,36 @@ function formatTelegramMessage(metadata, hasExistingTopic = false) {
     second: '2-digit'
   });
   
-  // Сообщение в новом формате
+  // Сообщение в новом компактном формате
   let message = '';
   
   if (hasExistingTopic) {
-    // Смайлик следов + сообщение для существующего посетителя
+    // Сообщение для существующего посетителя
     message += `👣 ПЕРЕХОД НА ДРУГУЮ СТРАНИЦУ\n\n`;
   } else {
-    // Смайлик следов + сообщение для нового посетителя
-    message += `👣 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`;
+    // Сообщение для нового посетителя
+    message += `👤 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`;
   }
   
   // URL страницы
   if (eventData.page_url) {
-    message += `${eventData.page_url}\n\n`;
+    message += `\`${eventData.page_url}\`\n`;
+  }
+  
+  // Visitor ID
+  if (visitorId) {
+    message += `Visitor ID: ${visitorId}\n`;
   }
   
   // Заголовок страницы (если есть)
   if (eventData.page_title && eventData.page_title.trim()) {
     message += `${eventData.page_title}\n\n`;
+  } else {
+    message += `\n`;
   }
   
   // Время в конце в указанном формате
-  message += `Время: ${timeFormatted}`;
+  message += `${timeFormatted}`;
   
   return message;
 }
