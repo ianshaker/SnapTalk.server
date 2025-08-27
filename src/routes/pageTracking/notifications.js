@@ -8,7 +8,7 @@
  * - Обработка ошибок отправки
  */
 
-import { sendToTopic } from '../../services/telegramService.js';
+import { sendToTopic, ensureTopicForVisitor } from '../../services/telegramService.js';
 import { logWithTimestamp } from './utils.js';
 
 /**
@@ -49,10 +49,26 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     
     logWithTimestamp(`Preparing Telegram notification for visitor ${visitorId} on site ${metadata.siteName}`);
     
-    // Форматирование сообщения
-    const message = formatTelegramMessage(metadata, false); // Пока считаем всех новыми
+    // Проверяем, существует ли уже посетитель для правильного форматирования сообщения
+    const topicInfo = await ensureTopicForVisitor(
+      client.id,
+      client,
+      visitorId,
+      eventData.request_id,
+      eventData.page_url,
+      {
+        title: eventData.page_title,
+        ref: eventData.referrer,
+        utm: eventData.utm_data
+      }
+    );
     
-    // Отправка уведомления через telegramService с автоматическим управлением топиками
+    const isExistingVisitor = topicInfo && typeof topicInfo === 'object' && topicInfo.isExistingVisitor;
+    
+    // Форматирование сообщения с учетом статуса посетителя
+    const message = formatTelegramMessage(metadata, isExistingVisitor);
+    
+    // Отправка уведомления через telegramService
     const telegramResult = await sendToTopic({
       clientId: client.id,
       text: message,
