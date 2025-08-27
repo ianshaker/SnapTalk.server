@@ -56,7 +56,7 @@ export function extractPagePath(url) {
  */
 export function prepareEventData(eventData) {
   // Извлекаем page_path из URL
-  const pagePath = extractPagePath(eventData.url);
+  const pagePath = eventData.url ? extractPagePath(eventData.url) : null;
   
   // Подготавливаем UTM параметры
   const utmData = {
@@ -89,7 +89,14 @@ export function prepareEventData(eventData) {
     utm_data: utmData, // database.js ожидает utm_data как объект
     user_agent: eventData.userAgent?.trim() || null,
     ip_address: eventData.ipAddress?.trim() || null,
-    event_timestamp: eventData.timestamp || new Date().toISOString()
+    event_timestamp: eventData.timestamp || new Date().toISOString(),
+    
+    // Session tracking поля
+    event_type: eventData.eventType || 'page_view',
+    session_duration: eventData.sessionDuration || null,
+    is_session_active: eventData.isSessionActive !== undefined ? eventData.isSessionActive : true,
+    is_session_start: eventData.isSessionStart || false,
+    is_session_end: eventData.isSessionEnd || false
   };
   
   return preparedData;

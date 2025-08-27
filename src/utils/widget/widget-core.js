@@ -11,9 +11,17 @@ export function generateWidgetCore() {
       this.visitorId = null;
       this.requestId = null;
       
+      // Session tracking
+      this.sessionStartTime = Date.now();
+      this.isSessionActive = true;
+      this.lastActivityTime = Date.now();
+      this.sessionInactivityTimeout = 30 * 60 * 1000; // 30 минут
+      this.sessionInactivityTimer = null;
+      
       this.initFingerprint();
       this.init();
       this.initPageTracking();
+      this.initSessionTracking();
     }
     
     init() {
@@ -132,6 +140,9 @@ export function generateWidgetCore() {
             
             // 🔥 АВТОМАТИЧЕСКИЙ ТРЕКИНГ ВИЗИТА - ОТКЛЮЧЕН
             // this.trackVisit(); // Отключено для избежания дублирования с trackPageView
+            
+            // Отправляем session_start событие
+            this.trackSessionEvent('session_start');
           })
           .catch(error => {
             console.warn('⚠️ FingerprintJS failed to initialize:', error);
@@ -188,6 +199,9 @@ export function generateWidgetCore() {
         return;
       }
       
+      // Обновляем время последней активности
+      this.updateLastActivity();
+      
       try {
         const response = await fetch(SERVER_URL + '/api/track/page', {
           method: 'POST',
@@ -199,7 +213,11 @@ export function generateWidgetCore() {
             url: url,
             title: title,
             referrer: document.referrer,
-            userAgent: navigator.userAgent
+            userAgent: navigator.userAgent,
+            // Session tracking поля
+            eventType: 'page_view',
+            isSessionActive: this.isSessionActive,
+            sessionDuration: Date.now() - this.sessionStartTime
           })
         });
         
@@ -269,6 +287,102 @@ export function generateWidgetCore() {
         term: urlParams.get('utm_term'),
         content: urlParams.get('utm_content')
       };
+    }
+    
+    // ===== SESSION TRACKING METHODS =====
+    
+    // Инициализация отслеживания сессий
+    initSessionTracking() {
+      // Отслеживание активности пользователя
+      ['click', 'scroll', 'keypress', 'mousemove'].forEach(event => {
+        document.addEventListener(event, () => this.updateLastActivity(), { passive: true });
+      });
+      
+      // Отслеживание переключения вкладок
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          this.trackSessionEvent('tab_switch', { action: 'hidden' });
+        } else {
+          this.trackSessionEvent('tab_switch', { action: 'visible' });
+          this.updateLastActivity();
+        }
+      });
+      
+      // Отслеживание закрытия страницы
+      window.addEventListener('beforeunload', () => {
+        this.trackSessionEvent('session_end');
+      });
+      
+      // Запускаем таймер неактивности
+      this.resetInactivityTimer();
+    }
+    
+    // Обновление времени последней активности
+    updateLastActivity() {
+      this.lastActivityTime = Date.now();
+      this.resetInactivityTimer();
+    }
+    
+    // Сброс таймера неактивности
+    resetInactivityTimer() {
+      if (this.sessionInactivityTimer) {
+        clearTimeout(this.sessionInactivityTimer);
+      }
+      
+      this.sessionInactivityTimer = setTimeout(() => {
+        if (this.isSessionActive) {
+          this.trackSessionEvent('session_end', { reason: 'inactivity' });
+          this.isSessionActive = false;
+        }
+      }, this.sessionInactivityTimeout);
+    }
+    
+    // Отправка session события
+    async trackSessionEvent(eventType, additionalData = {}) {
+      if (!this.visitorId) {
+        console.warn('⚠️ Cannot track session event: visitorId not available');
+        return;
+      }
+      
+      try {
+        const sessionDuration = Date.now() - this.sessionStartTime;
+        
+        const payload = {
+          siteKey: API_KEY,
+          visitorId: this.visitorId,
+          requestId: this.requestId,
+          eventType: eventType,
+          url: window.location.href,
+          title: document.title,
+          userAgent: navigator.userAgent,
+          isSessionActive: this.isSessionActive,
+          sessionDuration: sessionDuration,
+          ...additionalData
+        };
+        
+        // Для session_end добавляем специальные поля
+        if (eventType === 'session_end') {
+          payload.isSessionEnd = true;
+          this.isSessionActive = false;
+        } else if (eventType === 'session_start') {
+          payload.isSessionStart = true;
+        }
+        
+        const response = await fetch(SERVER_URL + '/api/track/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log(\`🔄 Session event '\${eventType}' tracked successfully:\`, result);
+        } else {
+          console.warn(\`⚠️ Session event '\${eventType}' tracking failed:\`, response.status);
+        }
+      } catch (error) {
+        console.warn(\`⚠️ Session event '\${eventType}' tracking error:\`, error);
+      }
     }
   `;
 }

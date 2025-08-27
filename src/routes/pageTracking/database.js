@@ -57,7 +57,13 @@ export async function savePageEvent(eventData) {
       utm_campaign: eventData.utm_data?.utm_campaign || null,
       utm_term: eventData.utm_data?.utm_term || null,
       utm_content: eventData.utm_data?.utm_content || null,
-      event_timestamp: eventData.event_timestamp || new Date().toISOString()
+      event_timestamp: eventData.event_timestamp || new Date().toISOString(),
+      // Session tracking поля
+      event_type: eventData.event_type || 'page_view',
+      session_duration: eventData.session_duration || null,
+      is_session_active: eventData.is_session_active !== undefined ? eventData.is_session_active : true,
+      is_session_start: eventData.is_session_start || false,
+      is_session_end: eventData.is_session_end || false
     };
     
     // Логирование попытки сохранения

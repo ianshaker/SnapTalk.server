@@ -20,6 +20,7 @@ import { findClientBySiteKey, refreshClientCache, getClientCacheStats } from './
 import { shouldProcessEvent, getAntiSpamCacheStats, forceCleanupAntiSpamCache, removeVisitorFromCache } from './antiSpamFilter.js';
 import { savePageEvent, checkDatabaseConnection } from './database.js';
 import { sendTelegramNotification, sendTestTelegramNotification, validateTelegramConfig } from './notifications.js';
+import { trackSession } from './session.js';
 
 const router = express.Router();
 
@@ -33,14 +34,13 @@ router.post('/page', async (req, res) => {
   try {
     logWithTimestamp('Received page tracking request');
     
-    // Валидация входных данных
-    const validation = validateTrackingData(req.body);
-    if (!validation.isValid) {
-      logWithTimestamp(`Validation failed: ${validation.errors.join(', ')}`);
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: validation.errors
+    // Валидация входящих данных
+    const validationResult = validateTrackingData(req.body);
+    if (!validationResult.isValid) {
+      logWithTimestamp(`❌ Validation failed: ${validationResult.errors.join(', ')}`);
+      return res.status(400).json({ 
+        error: 'Validation failed', 
+        details: validationResult.errors 
       });
     }
     
@@ -61,13 +61,21 @@ router.post('/page', async (req, res) => {
     // Подготовка данных события
     const eventData = prepareEventData({
       clientId: client.id,
-      visitorId,
-      requestId, // request_id от fingerprint сервиса
-      url,
-      title,
-      referrer,
-      userAgent,
-      ipAddress: req.ip || req.connection.remoteAddress
+      visitorId: req.body.visitorId,
+      requestId: req.body.requestId,
+      url: req.body.url,
+      title: req.body.title,
+      referrer: req.body.referrer,
+      utm: req.body.utm,
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip,
+      timestamp: new Date().toISOString(),
+      // Session tracking поля
+      eventType: req.body.eventType,
+      sessionDuration: req.body.sessionDuration,
+      isSessionActive: req.body.isSessionActive,
+      isSessionStart: req.body.isSessionStart,
+      isSessionEnd: req.body.isSessionEnd
     });
     
     // Проверка антиспам-фильтра
@@ -373,6 +381,12 @@ router.post('/test/telegram', async (req, res) => {
     });
   }
 });
+
+/**
+ * 🎯 POST /api/track/session
+ * Эндпоинт для трекинга session событий (session_start, session_end, tab_switch)
+ */
+router.post('/session', trackSession);
 
 // Экспорт роутера
 export default router;
