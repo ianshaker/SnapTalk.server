@@ -35,6 +35,7 @@ import {
   memoryMap
 } from './src/services/telegramService.js';
 import { formatNewVisitorMessage, formatReturnVisitorMessage, formatTabSwitchMessage, formatSessionEndMessage } from './src/services/messageFormatterService.js';
+import { getTelegramToClientService } from './src/services/telegramToClientService.js';
 
 const app = express();
 
@@ -303,6 +304,10 @@ function pushToClient(clientId, payload) {
 
 // Передаем функцию pushToClient в Telegram роутер
 setPushToClient(pushToClient);
+
+// Инициализируем TelegramToClientService с функцией pushToClient
+const telegramToClientService = getTelegramToClientService(pushToClient);
+console.log('✅ TelegramToClientService инициализирован с функцией pushToClient');
 
 // Старт
 server.listen(PORT, async () => {

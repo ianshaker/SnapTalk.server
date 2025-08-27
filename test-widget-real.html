@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Real Widget Test</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>Тест реального виджета SnapTalk</h1>
+    <p>Виджет должен появиться в правом нижнем углу.</p>
+    
+    <script>
+        // Загружаем реальный виджет с API ключом клиента Сергея
+        const script = document.createElement('script');
+        script.src = 'http://localhost:3000/widget.js?key=sk_test_455ec955-98b4-4139-9dec-c2abb72c916b';
+        script.onload = () => {
+            console.log('✅ Виджет загружен');
+        };
+        script.onerror = () => {
+            console.error('❌ Ошибка загрузки виджета');
+        };
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>
