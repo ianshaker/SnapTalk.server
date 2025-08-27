@@ -139,79 +139,29 @@ function formatTelegramMessage(metadata, hasExistingTopic = false) {
     second: '2-digit'
   });
   
-  // Базовая информация
+  // Упрощенное сообщение без смайликов и лишней информации
   let message = '';
   
+  // Время перехода
+  message += `**Время:** ${timeFormatted}\n\n`;
+  
   if (hasExistingTopic) {
-    // Сообщение для существующего посетителя (более краткое)
-    message += `🔄 **Переход по сайту**\n\n`;
+    // Сообщение для существующего посетителя
+    message += `**ПЕРЕХОД НА ДРУГУЮ СТРАНИЦУ**\n\n`;
   } else {
-    // Сообщение для нового посетителя (более подробное)
-    message += `🆕 **Новый посетитель на сайте**\n\n`;
-    message += `👤 **Посетитель:** \`${visitorId}\`\n`;
-  }
-  
-  message += `🌐 **Сайт:** ${siteName}\n`;
-  message += `📄 **Страница:** ${eventData.page_path || '/'}\n`;
-  
-  // Заголовок страницы (если есть)
-  if (eventData.page_title && eventData.page_title.trim()) {
-    message += `📝 **Заголовок:** ${eventData.page_title}\n`;
+    // Сообщение для нового посетителя
+    message += `**НОВЫЙ ПОСЕТИТЕЛЬ**\n\n`;
   }
   
   // URL страницы
   if (eventData.page_url) {
-    message += `🔗 **URL:** ${eventData.page_url}\n`;
+    message += `${eventData.page_url}\n\n`;
   }
   
-  // Реферер (если есть)
-  if (eventData.referrer && eventData.referrer.trim() && eventData.referrer !== eventData.page_url) {
-    try {
-      const referrerUrl = new URL(eventData.referrer);
-      const referrerDomain = referrerUrl.hostname;
-      message += `📥 **Откуда:** ${referrerDomain}\n`;
-    } catch {
-      // Если не удалось распарсить URL, показываем как есть
-      message += `📥 **Откуда:** ${eventData.referrer}\n`;
-    }
+  // Заголовок страницы (если есть)
+  if (eventData.page_title && eventData.page_title.trim()) {
+    message += `${eventData.page_title}`;
   }
-  
-  // UTM параметры (если есть)
-  if (eventData.utm_data && Object.keys(eventData.utm_data).length > 0) {
-    message += `\n📊 **UTM параметры:**\n`;
-    
-    if (eventData.utm_data.utm_source) {
-      message += `• Источник: ${eventData.utm_data.utm_source}\n`;
-    }
-    if (eventData.utm_data.utm_medium) {
-      message += `• Канал: ${eventData.utm_data.utm_medium}\n`;
-    }
-    if (eventData.utm_data.utm_campaign) {
-      message += `• Кампания: ${eventData.utm_data.utm_campaign}\n`;
-    }
-    if (eventData.utm_data.utm_term) {
-      message += `• Ключевое слово: ${eventData.utm_data.utm_term}\n`;
-    }
-    if (eventData.utm_data.utm_content) {
-      message += `• Контент: ${eventData.utm_data.utm_content}\n`;
-    }
-  }
-  
-  // Информация о браузере (если есть)
-  if (eventData.user_agent) {
-    const browserInfo = parseBrowserInfo(eventData.user_agent);
-    if (browserInfo) {
-      message += `\n🖥️ **Браузер:** ${browserInfo}\n`;
-    }
-  }
-  
-  // IP адрес (если есть)
-  if (eventData.ip_address && eventData.ip_address !== '127.0.0.1' && eventData.ip_address !== '::1') {
-    message += `🌍 **IP:** \`${eventData.ip_address}\`\n`;
-  }
-  
-  // Время
-  message += `\n⏰ **Время:** ${timeFormatted}`;
   
   return message;
 }
