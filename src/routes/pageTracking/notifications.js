@@ -9,6 +9,7 @@
  */
 
 import { sendToTopic, ensureTopicForVisitor } from '../../services/telegramService.js';
+import { formatTelegramMessage, getMessagePrefix } from '../../services/messageFormatterService.js';
 import { logWithTimestamp } from './utils.js';
 
 /**
@@ -66,7 +67,13 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     const isExistingVisitor = topicInfo && typeof topicInfo === 'object' && topicInfo.isExistingVisitor;
     
     // Форматирование сообщения с учетом статуса посетителя
-    const message = formatTelegramMessage(metadata, isExistingVisitor);
+    const messageResult = formatTelegramMessage({
+      eventData,
+      visitorId,
+      isExistingVisitor,
+      isPageTransition: isExistingVisitor
+    });
+    const message = messageResult.fullMessage;
     
     // Отправка уведомления через telegramService
     const telegramResult = await sendToTopic({
@@ -115,12 +122,13 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
 }
 
 /**
- * Форматирование сообщения для Telegram
+ * Форматирование сообщения для Telegram (устаревшая функция, теперь используется сервис)
  * @param {Object} metadata - Метаданные события
  * @param {boolean} hasExistingTopic - Есть ли существующий топик для посетителя
  * @returns {string} - Отформатированное сообщение
+ * @deprecated Используйте formatTelegramMessage из messageFormatterService
  */
-function formatTelegramMessage(metadata, hasExistingTopic = false) {
+function formatTelegramMessageLegacy(metadata, hasExistingTopic = false) {
   const {
     siteName,
     visitorId,
@@ -128,49 +136,14 @@ function formatTelegramMessage(metadata, hasExistingTopic = false) {
     eventData
   } = metadata;
   
-  // Форматирование времени в нужном формате
-  const timeFormatted = new Date(timestamp).toLocaleString('ru-RU', {
-    timeZone: 'Europe/Moscow',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
+  const result = formatTelegramMessage({
+    eventData,
+    visitorId,
+    isExistingVisitor: hasExistingTopic,
+    isPageTransition: hasExistingTopic
   });
   
-  // Сообщение в новом компактном формате
-  let message = '';
-  
-  if (hasExistingTopic) {
-    // Сообщение для существующего посетителя
-    message += `👣 ПЕРЕХОД НА ДРУГУЮ СТРАНИЦУ\n\n`;
-  } else {
-    // Сообщение для нового посетителя
-    message += `👤 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`;
-  }
-  
-  // URL страницы
-  if (eventData.page_url) {
-    message += `\`${eventData.page_url}\`\n`;
-  }
-  
-  // Visitor ID
-  if (visitorId) {
-    message += `Visitor ID: ${visitorId}\n`;
-  }
-  
-  // Заголовок страницы (если есть)
-  if (eventData.page_title && eventData.page_title.trim()) {
-    message += `${eventData.page_title}\n\n`;
-  } else {
-    message += `\n`;
-  }
-  
-  // Время в конце в указанном формате
-  message += `${timeFormatted}`;
-  
-  return message;
+  return result.fullMessage;
 }
 
 /**

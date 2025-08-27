@@ -34,6 +34,7 @@ import {
   saveSiteVisit,
   memoryMap
 } from './src/services/telegramService.js';
+import { formatNewVisitorMessage, formatReturnVisitorMessage } from './src/services/messageFormatterService.js';
 
 const app = express();
 
@@ -240,50 +241,24 @@ async function checkRecentVisit(clientId, visitorId, url) {
 // ❌ УДАЛЕНА: saveVisitToDatabase - данные сохраняются в client_topics через dbSaveTopic
 
 function formatVisitMessage(client, visitorId, url, meta) {
-  const timestamp = new Date().toLocaleString('ru-RU', {
-    timeZone: 'Europe/Moscow',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
+  return formatNewVisitorMessage({
+    url,
+    visitorId,
+    pageTitle: meta?.title,
+    meta
   });
-
-  let message = `\`${url}\`\n`;
-  message += `Visitor ID: ${visitorId}\n`;
-  if (meta?.title && meta.title.trim()) {
-    message += `${meta.title}\n\n`;
-  } else {
-    message += `\n`;
-  }
-  message += `${timestamp}`;
-  
-  return message;
 }
 
 // 🆕 Формат сообщения для повторного визита
 function formatReturnVisitMessage(client, visitorId, url, meta, previousUrl, firstVisit) {
-  const timestamp = new Date().toLocaleString('ru-RU', {
-    timeZone: 'Europe/Moscow',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
+  return formatReturnVisitorMessage({
+    url,
+    visitorId,
+    pageTitle: meta?.title,
+    meta,
+    previousUrl,
+    firstVisit
   });
-
-  let message = `\`${url}\`\n`;
-  message += `Visitor ID: ${visitorId}\n`;
-  if (meta?.title && meta.title.trim()) {
-    message += `${meta.title}\n\n`;
-  } else {
-    message += `\n`;
-  }
-  message += `${timestamp}`;
-  
-  return message;
 }
 
 
