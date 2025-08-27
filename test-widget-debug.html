@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест виджета SnapTalk - Отладка</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .debug-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="debug-panel">
+        <h1>🔧 Отладка виджета SnapTalk</h1>
+        <p>Эта страница поможет диагностировать проблемы с виджетом.</p>
+        
+        <div class="debug-info">
+            <strong>API Key:</strong> snaptalk_cwj09fmbtzo_1756137141423<br>
+            <strong>Expected Client ID:</strong> 455ec955-98b4-4139-9dec-c2abb72c916b<br>
+            <strong>Timestamp:</strong> <span id="timestamp"></span>
+        </div>
+        
+        <button onclick="checkWidgetStatus()">🔍 Проверить статус виджета</button>
+        <button onclick="reloadWidget()">🔄 Перезагрузить виджет</button>
+        <button onclick="clearCache()">🗑️ Очистить кэш</button>
+        <button onclick="testMessage()">💬 Отправить тестовое сообщение</button>
+        
+        <div id="status"></div>
+        <div id="widget-info" class="debug-info" style="display: none;"></div>
+    </div>
+    
+    <div class="debug-panel">
+        <h2>📝 Инструкции</h2>
+        <ol>
+            <li>Нажмите "Проверить статус виджета" чтобы увидеть текущий CLIENT_ID</li>
+            <li>Если CLIENT_ID неправильный, нажмите "Очистить кэш" и "Перезагрузить виджет"</li>
+            <li>Откройте чат виджета и отправьте сообщение</li>
+            <li>Проверьте логи сервера на наличие правильного clientId</li>
+        </ol>
+    </div>
+
+    <script>
+        // Принудительная загрузка виджета с отключением кэша
+        function loadWidget() {
+            const timestamp = Date.now();
+            const script = document.createElement('script');
+            script.src = `http://localhost:3000/api/widget.js?key=snaptalk_cwj09fmbtzo_1756137141423&_t=${timestamp}`;
+            script.async = true;
+            script.onload = () => {
+                updateStatus('Виджет загружен успешно', 'success');
+                setTimeout(checkWidgetStatus, 1000);
+            };
+            script.onerror = () => {
+                updateStatus('Ошибка загрузки виджета', 'error');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
+        }
+        
+        function checkWidgetStatus() {
+            const infoEl = document.getElementById('widget-info');
+            
+            if (window.SnapTalkWidget) {
+                // Попытаемся извлечь CLIENT_ID из виджета
+                const widgetScript = Array.from(document.scripts).find(s => 
+                    s.src && s.src.includes('widget.js')
+                );
+                
+                let clientIdInfo = 'CLIENT_ID не найден в скрипте';
+                if (widgetScript) {
+                    // Делаем запрос к виджету для получения CLIENT_ID
+                    fetch(widgetScript.src)
+                        .then(response => response.text())
+                        .then(code => {
+                            const clientIdMatch = code.match(/CLIENT_ID = '([^']+)'/);
+                            const apiKeyMatch = code.match(/API_KEY = '([^']+)'/);
+                            
+                            infoEl.innerHTML = `
+                                <strong>Статус виджета:</strong> Загружен ✅<br>
+                                <strong>CLIENT_ID:</strong> ${clientIdMatch ? clientIdMatch[1] : 'Не найден'}<br>
+                                <strong>API_KEY:</strong> ${apiKeyMatch ? apiKeyMatch[1] : 'Не найден'}<br>
+                                <strong>Ожидаемый CLIENT_ID:</strong> 455ec955-98b4-4139-9dec-c2abb72c916b<br>
+                                <strong>Соответствие:</strong> ${clientIdMatch && clientIdMatch[1] === '455ec955-98b4-4139-9dec-c2abb72c916b' ? '✅ Правильный' : '❌ Неправильный'}
+                            `;
+                            infoEl.style.display = 'block';
+                            
+                            if (clientIdMatch && clientIdMatch[1] === '455ec955-98b4-4139-9dec-c2abb72c916b') {
+                                updateStatus('CLIENT_ID правильный! Виджет должен работать.', 'success');
+                            } else {
+                                updateStatus('CLIENT_ID неправильный! Требуется очистка кэша.', 'error');
+                            }
+                        })
+                        .catch(err => {
+                            updateStatus('Ошибка проверки CLIENT_ID: ' + err.message, 'error');
+                        });
+                } else {
+                    updateStatus('Скрипт виджета не найден', 'error');
+                }
+            } else {
+                updateStatus('Виджет не загружен', 'error');
+                infoEl.style.display = 'none';
+            }
+        }
+        
+        function reloadWidget() {
+            // Удаляем старые скрипты виджета
+            const oldScripts = Array.from(document.scripts).filter(s => 
+                s.src && s.src.includes('widget.js')
+            );
+            oldScripts.forEach(script => script.remove());
+            
+            // Удаляем виджет из DOM
+            const widgetEl = document.getElementById('snaptalk-widget');
+            if (widgetEl) widgetEl.remove();
+            
+            // Удаляем из window
+            delete window.SnapTalkWidget;
+            
+            updateStatus('Перезагружаем виджет...', 'info');
+            setTimeout(loadWidget, 500);
+        }
+        
+        function clearCache() {
+            // Очищаем localStorage и sessionStorage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Принудительная перезагрузка страницы с очисткой кэша
+            updateStatus('Очищаем кэш и перезагружаем страницу...', 'info');
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 1000);
+        }
+        
+        function testMessage() {
+            if (window.SnapTalkWidget) {
+                updateStatus('Откройте виджет и отправьте сообщение "Тест отладки"', 'info');
+            } else {
+                updateStatus('Виджет не загружен. Сначала загрузите виджет.', 'error');
+            }
+        }
+        
+        // Обновляем timestamp
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        
+        // Автоматически загружаем виджет при загрузке страницы
+        window.addEventListener('load', () => {
+            setTimeout(loadWidget, 1000);
+        });
+    </script>
+</body>
+</html>

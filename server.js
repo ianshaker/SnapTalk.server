@@ -145,6 +145,19 @@ app.post('/api/visit/track', async (req, res) => {
 app.post('/api/chat/send', async (req, res) => {
   try {
     const { clientId, apiKey, text, meta, visitorId, requestId } = req.body || {};
+    
+    // 🔍 ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ: входящий запрос
+    console.log('📤 /api/chat/send received:', {
+      clientId,
+      apiKey,
+      textLength: text?.length || 0,
+      textPreview: text?.slice(0, 20) + (text?.length > 20 ? '...' : ''),
+      hasVisitorId: !!visitorId,
+      hasRequestId: !!requestId,
+      userAgent: req.get('User-Agent')?.slice(0, 50),
+      referer: req.get('Referer')
+    });
+    
     if (!clientId || !text) {
       return res.status(400).json({ ok: false, error: 'clientId and text required' });
     }
@@ -155,6 +168,14 @@ app.post('/api/chat/send', async (req, res) => {
       console.log(`❌ Client not found for apiKey: ${apiKey}`);
       return res.status(404).json({ ok: false, error: 'Client not found' });
     }
+    
+    // 🔍 ПРОВЕРКА: соответствие clientId из запроса и из базы данных
+    console.log('🔍 ClientId validation:', {
+      receivedClientId: clientId,
+      databaseClientId: client.id,
+      clientName: client.client_name,
+      match: clientId === client.id
+    });
 
     const utm = meta?.utm || {};
     const ref = meta?.ref || '';
