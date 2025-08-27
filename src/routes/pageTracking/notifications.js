@@ -120,23 +120,22 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     switch (eventData.event_type) {
       case 'tab_switch':
         message = `🔄 Клиент переключил вкладку\n` +
-                 `👤 ${shortVisitorId} • ${timeStr}\n` +
-                 `📄 ${eventData.page_title || eventData.page_url}`;
+                 `${shortVisitorId} • ${timeStr}\n` +
+                 `${eventData.page_title || eventData.page_url}`;
         break;
       case 'session_end':
         const duration = eventData.session_duration ? 
           `${Math.round(eventData.session_duration / 1000)}с` : '?';
         message = `🔚 Клиент завершил сессию\n` +
-                 `👤 ${shortVisitorId} • ${timeStr} • ⏱️${duration}\n` +
-                 `📄 ${eventData.page_title || eventData.page_url}`;
+                 `${shortVisitorId} • ${timeStr} • ⏱️${duration}\n` +
+                 `${eventData.page_title || eventData.page_url}`;
         break;
       case 'page_view':
       case 'session_start':
       default:
-        const device = eventData.user_agent?.includes('Mobile') ? '📱' : '💻';
         message = `👋 Новый посетитель\n` +
-                 `👤 ${shortVisitorId} • ${timeStr} • ${device}\n` +
-                 `📄 ${eventData.page_title || eventData.page_url}\n` +
+                 `${shortVisitorId} • ${timeStr}\n` +
+                 `${eventData.page_title || eventData.page_url}\n` +
                  `🔗 ${eventData.referrer || 'Прямой переход'}`;
         break;
     }

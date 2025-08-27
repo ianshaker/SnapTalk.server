@@ -40,15 +40,44 @@ export async function findClientByApiKey(apiKey) {
   }
 }
 
-export async function dbGetTopic(clientId) {
+export async function dbGetTopic(clientId, chatId = null) {
   if (!sb) return memoryMap.get(clientId) || null;
+  
+  // 🆕 ДОБАВЛЕНО: поиск с учетом chat_id
+  const finalChatId = chatId || parseInt(SUPERGROUP_ID);
+  
   const { data, error } = await sb
+    .from('client_topics')
+    .select('topic_id, chat_id')
+    .eq('client_id', clientId)
+    .eq('chat_id', finalChatId)
+    .maybeSingle();
+    
+  if (error) { 
+    console.error('dbGetTopic error', error); 
+    return null; 
+  }
+  
+  if (data) {
+    console.log(`✅ Found topic ${data.topic_id} for client ${clientId} in chat ${finalChatId}`);
+    return data.topic_id;
+  }
+  
+  // FALLBACK: если не найдено с chat_id, ищем без него (обратная совместимость)
+  console.log(`🔄 Fallback: searching for client ${clientId} without chat_id`);
+  const { data: fallbackData, error: fallbackError } = await sb
     .from('client_topics')
     .select('topic_id')
     .eq('client_id', clientId)
+    .is('chat_id', null)
     .maybeSingle();
-  if (error) { console.error('dbGetTopic error', error); return null; }
-  return data?.topic_id ?? null;
+    
+  if (fallbackError) {
+    console.error('dbGetTopic fallback error', fallbackError);
+    return null;
+  }
+  
+  return fallbackData?.topic_id ?? null;
 }
 
 // 🆕 Поиск существующего посетителя по visitor_id для конкретного клиента
@@ -127,12 +156,16 @@ export async function isTopicValidInTelegram(botToken, groupId, topicId) {
   }
 }
 
-export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId = null, url = null, meta = null) {
+export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId = null, url = null, meta = null, chatId = null) {
   if (!sb) { memoryMap.set(clientId, topicId); return; }
+  
+  // 🆕 ДОБАВЛЕНО: chat_id для корректной маршрутизации
+  const finalChatId = chatId || parseInt(SUPERGROUP_ID);
   
   const topicData = { 
     client_id: clientId, 
     topic_id: topicId,
+    chat_id: finalChatId, // 🔥 НОВОЕ: сохраняем chat_id!
     visitor_id: visitorId,
     request_id: requestId,
     page_url: url, // 🔥 СОХРАНЯЕМ URL!
@@ -148,9 +181,12 @@ export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId
       requestId, 
       url,
       meta,
+      chatId: finalChatId, // 🔥 НОВОЕ: включаем chat_id в fingerprint
       timestamp: new Date().toISOString() 
     } : null
   };
+  
+  console.log(`💾 dbSaveTopic: Saving topic ${topicId} for client ${clientId} in chat ${finalChatId}`);
   
   // 🔄 ИСПРАВЛЕНИЕ: используем visitor_id для уникальности записей!
   try {
@@ -415,12 +451,14 @@ export async function ensureTopic(clientId, client, visitorId = null, requestId 
 
 // 🆕 Вынесенная логика создания нового топика
 export async function createNewTopic(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
-  let topicId = await dbGetTopic(clientId);
+  // 🆕 ДОБАВЛЕНО: используем chat_id для корректного поиска и сохранения
+  const chatId = client?.telegram_group_id || SUPERGROUP_ID;
+  let topicId = await dbGetTopic(clientId, chatId);
   if (topicId) return topicId;
 
   // Используем настройки клиента
   const botToken = client?.telegram_bot_token || BOT_TOKEN;
-  const groupId = client?.telegram_group_id || SUPERGROUP_ID;
+  const groupId = chatId; // используем уже определенный chatId
 
   if (!botToken || !groupId) {
     throw new Error(`Telegram settings not configured for client ${client?.client_name || clientId}`);
@@ -440,7 +478,8 @@ export async function createNewTopic(clientId, client, visitorId = null, request
   if (!data?.ok) throw new Error('createForumTopic failed: ' + JSON.stringify(data));
   topicId = data.result.message_thread_id;
 
-  await dbSaveTopic(clientId, topicId, visitorId, requestId, url, meta);
+  // 🆕 ДОБАВЛЕНО: передаем chat_id для корректной маршрутизации
+  await dbSaveTopic(clientId, topicId, visitorId, requestId, url, meta, chatId);
   
   return {
     topicId,
