@@ -8,7 +8,7 @@
  * - Обработка ошибок отправки
  */
 
-import { sendToTopic, ensureTopicForVisitor, saveSiteVisit } from '../../services/telegramService.js';
+import { sendToTopic, ensureTopicForVisitor, ensureTopicForVisitorForClient, saveSiteVisit } from '../../services/telegramService.js';
 import { formatTelegramMessage, getMessagePrefix, formatTabSwitchMessage, formatSessionEndMessage } from '../../services/messageFormatterService.js';
 import { logWithTimestamp } from './utils.js';
 
@@ -51,18 +51,33 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     logWithTimestamp(`Preparing Telegram notification for visitor ${visitorId} on site ${metadata.siteName}`);
     
     // Проверяем, существует ли уже посетитель для правильного форматирования сообщения
-    const topicInfo = await ensureTopicForVisitor(
-      client.id,
-      client,
-      visitorId,
-      eventData.request_id,
-      eventData.page_url,
-      {
-        title: eventData.page_title,
-        ref: eventData.referrer,
-        utm: eventData.utm_data
-      }
-    );
+    // Для session событий используем поиск по конкретному клиенту
+    const isSessionEvent = ['session_start', 'session_end', 'tab_switch'].includes(eventData.event_type);
+    const topicInfo = isSessionEvent 
+      ? await ensureTopicForVisitorForClient(
+          client.id,
+          client,
+          visitorId,
+          eventData.request_id,
+          eventData.page_url,
+          {
+            title: eventData.page_title,
+            ref: eventData.referrer,
+            utm: eventData.utm_data
+          }
+        )
+      : await ensureTopicForVisitor(
+          client.id,
+          client,
+          visitorId,
+          eventData.request_id,
+          eventData.page_url,
+          {
+            title: eventData.page_title,
+            ref: eventData.referrer,
+            utm: eventData.utm_data
+          }
+        );
     
     const isExistingVisitor = topicInfo && typeof topicInfo === 'object' && topicInfo.isExistingVisitor;
     

@@ -50,7 +50,42 @@ export async function dbGetTopic(clientId) {
   return data?.topic_id ?? null;
 }
 
-// 🆕 Поиск существующего посетителя по visitor_id (БЕЗ client_id!)
+// 🆕 Поиск существующего посетителя по visitor_id для конкретного клиента
+export async function findExistingVisitorForClient(clientId, visitorId) {
+  if (!sb || !visitorId) {
+    console.log(`❌ findExistingVisitorForClient: No Supabase connection or visitorId`);
+    return null;
+  }
+  
+  try {
+    console.log(`🔍 Searching for existing visitor ${visitorId.slice(0,8)}... for client ${clientId}`);
+    
+    const { data, error } = await sb
+      .from('client_topics')
+      .select('topic_id, visitor_id, created_at, page_url, client_id')
+      .eq('visitor_id', visitorId)
+      .eq('client_id', clientId)  // 🔥 Ищем для конкретного клиента!
+      .maybeSingle();
+    
+    if (error) {
+      console.error('❌ findExistingVisitorForClient error:', error);
+      return null;
+    }
+    
+    if (data) {
+      console.log(`✅ Found existing visitor for client ${clientId}: topic_id=${data.topic_id}, created_at=${data.created_at}`);
+    } else {
+      console.log(`❌ No existing visitor found for ${visitorId.slice(0,8)}... and client ${clientId}`);
+    }
+    
+    return data; // { topic_id, visitor_id, created_at, page_url, client_id } или null
+  } catch (error) {
+    console.error('❌ findExistingVisitorForClient error:', error);
+    return null;
+  }
+}
+
+// 🆕 Поиск существующего посетителя по visitor_id (БЕЗ client_id!) - для обратной совместимости
 export async function findExistingVisitor(clientId, visitorId) {
   if (!sb || !visitorId) {
     console.log(`❌ findExistingVisitor: No Supabase connection or visitorId`);
@@ -256,7 +291,71 @@ export async function saveSiteVisit(clientId, visitorId, requestId, url, meta, u
 }
 
 // ===== Telegram helpers =====
-// 🆕 Умная функция обеспечения топика для посетителя
+// 🆕 Умная функция обеспечения топика для посетителя конкретного клиента
+export async function ensureTopicForVisitorForClient(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
+  // 1️⃣ Если есть visitorId - ищем существующего посетителя для конкретного клиента
+  if (visitorId) {
+    console.log(`🔍 Checking for existing visitor: ${visitorId.slice(0,8)}... for client ${clientId}`);
+    
+    const existingVisitor = await findExistingVisitorForClient(clientId, visitorId);
+    if (existingVisitor) {
+      console.log(`👤 Found existing visitor for client ${clientId} with topic: ${existingVisitor.topic_id}`);
+      
+      // 2️⃣ Проверяем валидность топика в Telegram
+      const botToken = client?.telegram_bot_token || BOT_TOKEN;
+      const groupId = client?.telegram_group_id || SUPERGROUP_ID;
+      
+      const isValidTopic = await isTopicValidInTelegram(botToken, groupId, existingVisitor.topic_id);
+      if (isValidTopic) {
+        console.log(`✅ Topic ${existingVisitor.topic_id} is valid - reusing for visitor and client ${clientId}`);
+        
+        // 3️⃣ Обновляем ТОЛЬКО метаданные последнего визита (НЕ создаем новую запись!)
+        try {
+          const { error } = await sb
+            .from('client_topics')
+            .update({
+              page_url: url,
+              page_title: meta?.title || null,
+              referrer: meta?.ref || null,
+              utm_source: meta?.utm?.source || null,
+              utm_medium: meta?.utm?.medium || null,
+              utm_campaign: meta?.utm?.campaign || null,
+              updated_at: new Date().toISOString(),
+              fingerprint_data: visitorId ? { 
+                visitorId, 
+                requestId, 
+                url,
+                meta,
+                timestamp: new Date().toISOString() 
+              } : null
+            })
+            .eq('client_id', clientId)
+            .eq('visitor_id', visitorId);
+          
+          if (error) console.error('❌ Update existing visitor error:', error);
+          else console.log(`🔄 Updated existing visitor metadata for client ${clientId}: ${visitorId.slice(0,8)}...`);
+        } catch (error) {
+          console.error('❌ Update existing visitor error:', error);
+        }
+        
+        return {
+          topicId: existingVisitor.topic_id,
+          isExistingVisitor: true,
+          previousUrl: existingVisitor.page_url,
+          firstVisit: existingVisitor.created_at,
+          originalClientId: existingVisitor.client_id  // 🔥 Оригинальный client_id
+        };
+      } else {
+        console.log(`❌ Topic ${existingVisitor.topic_id} is invalid - creating new topic for client ${clientId}`);
+      }
+    }
+  }
+  
+  // 4️⃣ Создаем новый топик (для новых посетителей или если старый топик недействителен)
+  return await createNewTopic(clientId, client, visitorId, requestId, url, meta);
+}
+
+// 🆕 Умная функция обеспечения топика для посетителя (глобальный поиск)
 export async function ensureTopicForVisitor(clientId, client, visitorId = null, requestId = null, url = null, meta = null) {
   // 1️⃣ Если есть visitorId - ищем существующего посетителя
   if (visitorId) {
