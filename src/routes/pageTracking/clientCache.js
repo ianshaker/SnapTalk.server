@@ -83,7 +83,7 @@ export async function findClientBySiteKey(siteKey) {
         api_key,
         integration_status,
         telegram_bot_token,
-        telegram_group_id,
+        telegram_chat_id,
         user_id,
         created_at
       `)
