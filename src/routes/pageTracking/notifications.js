@@ -128,7 +128,7 @@ function formatTelegramMessage(metadata, hasExistingTopic = false) {
     eventData
   } = metadata;
   
-  // Форматирование времени
+  // Форматирование времени в нужном формате
   const timeFormatted = new Date(timestamp).toLocaleString('ru-RU', {
     timeZone: 'Europe/Moscow',
     year: 'numeric',
@@ -139,18 +139,15 @@ function formatTelegramMessage(metadata, hasExistingTopic = false) {
     second: '2-digit'
   });
   
-  // Упрощенное сообщение без смайликов и лишней информации
+  // Сообщение в новом формате
   let message = '';
   
-  // Время перехода
-  message += `**Время:** ${timeFormatted}\n\n`;
-  
   if (hasExistingTopic) {
-    // Сообщение для существующего посетителя
-    message += `**ПЕРЕХОД НА ДРУГУЮ СТРАНИЦУ**\n\n`;
+    // Смайлик следов + сообщение для существующего посетителя
+    message += `👣 ПЕРЕХОД НА ДРУГУЮ СТРАНИЦУ\n\n`;
   } else {
-    // Сообщение для нового посетителя
-    message += `**НОВЫЙ ПОСЕТИТЕЛЬ**\n\n`;
+    // Смайлик следов + сообщение для нового посетителя
+    message += `👣 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`;
   }
   
   // URL страницы
@@ -160,8 +157,11 @@ function formatTelegramMessage(metadata, hasExistingTopic = false) {
   
   // Заголовок страницы (если есть)
   if (eventData.page_title && eventData.page_title.trim()) {
-    message += `${eventData.page_title}`;
+    message += `${eventData.page_title}\n\n`;
   }
+  
+  // Время в конце в указанном формате
+  message += `Время: ${timeFormatted}`;
   
   return message;
 }
