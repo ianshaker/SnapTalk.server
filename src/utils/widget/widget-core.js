@@ -30,7 +30,7 @@ export function generateWidgetCore() {
       this.initTracking();
       this.init();
       // Инициализация PageTracker после получения visitorId
-      this.initPageTracking();
+      this.pageTracker.initPageTracking();
       // initSessionTracking() перенесен в initTracking() после получения visitorId
     }
     
