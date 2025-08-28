@@ -1,6 +1,7 @@
 import express from 'express';
-import { sb } from '../config/env.js';
+import { sb, SUPERGROUP_ID } from '../config/env.js';
 import { memoryMap } from '../services/telegramService.js';
+import { getTelegramToClientService } from '../services/telegramToClientService.js';
 
 const router = express.Router();
 
@@ -16,60 +17,44 @@ export function setPushToClient(pushFunction) {
 router.post('/webhook/:WEBHOOK_SECRET', async (req, res) => {
   try {
     const { WEBHOOK_SECRET } = req.params;
-    const { SUPERGROUP_ID } = process.env;
     
-    const update = req.body;
-    const msg = update?.message;
-    const text = msg?.text;
-    const topicId = msg?.message_thread_id;
-    const chatId = msg?.chat?.id;
-
-    // Интересуют только сообщения в топиках нашей супергруппы
-    if (!text || !topicId || chatId !== parseInt(SUPERGROUP_ID)) {
-      return res.sendStatus(200);
-    }
-
-    // Ищем clientId по topicId
-    let clientId = null;
-    if (sb) {
-      const { data, error } = await sb
-        .from('client_topics')
-        .select('client_id')
-        .eq('topic_id', topicId)
-        .maybeSingle();
-      if (!error) clientId = data?.client_id || null;
+    console.log('🎯 [TELEGRAM WEBHOOK] Получен запрос от Telegram');
+    
+    // Получаем экземпляр сервиса
+    const telegramService = getTelegramToClientService();
+    
+    // Обрабатываем сообщение через новый сервис
+    const result = await telegramService.processIncomingMessage(req.body);
+    
+    // Логируем результат обработки
+    if (result.success) {
+      console.log('✅ [TELEGRAM WEBHOOK] Сообщение успешно обработано:', {
+        messageId: result.messageId,
+        clientId: result.clientId,
+        clientName: result.clientName,
+        processingTime: result.processingTime + 'ms',
+        websocketDelivery: result.delivery?.websocket?.success,
+        supabaseDelivery: result.delivery?.supabase?.success
+      });
     } else {
-      for (const [cid, tid] of memoryMap.entries()) {
-        if (tid === topicId) { clientId = cid; break; }
-      }
+      console.log('❌ [TELEGRAM WEBHOOK] Ошибка обработки сообщения:', {
+        errorType: result.error?.type,
+        errorMessage: result.error?.message,
+        messageId: result.error?.messageId,
+        processingTime: result.error?.processingTime
+      });
     }
-
-    if (!clientId) return res.sendStatus(200);
-
-    console.log(`📱 Telegram → Site: "${text}" → ${clientId}`);
-
-    // 1) Supabase Broadcast (если подключён)
-    if (sb) {
-      try {
-        await sb.channel(`client:${clientId}`).send({
-          type: 'broadcast',
-          event: 'manager_message',
-          payload: { from: 'manager', text, ts: Date.now() }
-        });
-      } catch (broadcastError) {
-        console.error('❌ Supabase broadcast error:', broadcastError);
-      }
-    }
-
-    // 2) WebSocket push (всегда, если есть активные подписчики)
-    const payload = { from: 'manager', text, ts: Date.now() };
-    if (pushToClient) {
-      pushToClient(clientId, payload);
-    }
-
+    
     return res.sendStatus(200);
   } catch (e) {
-    console.error('webhook error', e);
+    console.error('❌ [TELEGRAM WEBHOOK] Критическая ошибка:', {
+      error: e.message,
+      stack: e.stack,
+      requestBody: req.body,
+      timestamp: new Date().toISOString(),
+      url: req.url,
+      method: req.method
+    });
     return res.sendStatus(200);
   }
 });

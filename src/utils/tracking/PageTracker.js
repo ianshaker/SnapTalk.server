@@ -57,7 +57,9 @@ export class PageTracker {
       return;
     }
     
-    // Отслеживание начальной загрузки страницы
+    // Отслеживание начальной загрузки страницы (ОТКЛЮЧЕНО для предотвращения дублирования с session_start)
+    // Первоначальный просмотр страницы теперь регистрируется через событие session_start
+    /*
     if (document.readyState === 'complete') {
       setTimeout(() => this.trackInitialPageView(), 2000);
     } else {
@@ -65,6 +67,7 @@ export class PageTracker {
         setTimeout(() => this.trackInitialPageView(), 2000);
       });
     }
+    */
     
     // Monkey-patch History API для отслеживания SPA переходов
     const originalPushState = history.pushState;

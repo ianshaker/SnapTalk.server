@@ -103,16 +103,42 @@ export function formatPageTransitionMessage({ url, visitorId, pageTitle, timesta
 }
 
 /**
+ * Определение типа посетителя на основе статуса сессии
+ * @param {boolean} isExistingVisitor - Является ли посетитель существующим
+ * @param {string} lastSessionStatus - Статус последней сессии ('active', 'closed', 'timeout')
+ * @returns {string} - Тип посетителя
+ */
+export function getVisitorType(isExistingVisitor = false, lastSessionStatus = 'active') {
+  if (!isExistingVisitor) {
+    return 'new';
+  }
+  
+  if (lastSessionStatus === 'closed' || lastSessionStatus === 'timeout') {
+    return 'returning_after_closure';
+  }
+  
+  return 'page_transition';
+}
+
+/**
  * Получение префикса для сообщения в зависимости от типа посетителя
  * @param {boolean} isExistingVisitor - Является ли посетитель существующим
- * @param {boolean} isPageTransition - Является ли это переходом между страницами
+ * @param {boolean} isPageTransition - Является ли это переходом между страницами (устарело)
+ * @param {string} lastSessionStatus - Статус последней сессии ('active', 'closed', 'timeout')
  * @returns {string} - Префикс сообщения
  */
-export function getMessagePrefix(isExistingVisitor = false, isPageTransition = false) {
-  if (isPageTransition || isExistingVisitor) {
-    return `👣 ПЕРЕХОД НА ДРУГУЮ СТРАНИЦУ\n\n`;
-  } else {
-    return `👤 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`;
+export function getMessagePrefix(isExistingVisitor = false, isPageTransition = false, lastSessionStatus = 'active') {
+  const visitorType = getVisitorType(isExistingVisitor, lastSessionStatus);
+  
+  switch (visitorType) {
+    case 'new':
+      return `👤 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`;
+    case 'returning_after_closure':
+      return `🔄 ВОЗВРАТ ПОСЛЕ ЗАКРЫТИЯ САЙТА\n\n`;
+    case 'page_transition':
+      return `👣 ПЕРЕХОД НА ДРУГУЮ СТРАНИЦУ\n\n`;
+    default:
+      return `👤 НОВЫЙ ПОСЕТИТЕЛЬ\n\n`;
   }
 }
 
@@ -124,7 +150,8 @@ export function getMessagePrefix(isExistingVisitor = false, isPageTransition = f
  * @param {string} [options.pageTitle] - Заголовок страницы
  * @param {Date|string} [options.timestamp] - Временная метка
  * @param {boolean} [options.isExistingVisitor] - Является ли посетитель существующим
- * @param {boolean} [options.isPageTransition] - Является ли это переходом между страницами
+ * @param {boolean} [options.isPageTransition] - Является ли это переходом между страницами (устарело)
+ * @param {string} [options.lastSessionStatus] - Статус последней сессии ('active', 'closed', 'timeout')
  * @param {Object} [options.meta] - Дополнительные метаданные
  * @param {Object} [options.eventData] - Данные события (для совместимости с notifications.js)
  * @returns {Object} - Объект с сообщением и префиксом
@@ -137,6 +164,7 @@ export function formatTelegramMessage(options) {
     timestamp,
     isExistingVisitor = false,
     isPageTransition = false,
+    lastSessionStatus = 'active',
     meta,
     eventData
   } = options;
@@ -153,12 +181,13 @@ export function formatTelegramMessage(options) {
     timestamp: finalTimestamp
   });
 
-  const prefix = getMessagePrefix(isExistingVisitor, isPageTransition);
+  const prefix = getMessagePrefix(isExistingVisitor, isPageTransition, lastSessionStatus);
 
   return {
     message,
     prefix,
-    fullMessage: prefix + message
+    fullMessage: prefix + message,
+    visitorType: getVisitorType(isExistingVisitor, lastSessionStatus)
   };
 }
 

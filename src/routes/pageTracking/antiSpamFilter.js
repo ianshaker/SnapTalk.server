@@ -14,7 +14,7 @@ import { logWithTimestamp } from './utils.js';
 const antiSpamCache = new Map();
 
 // Константы для антиспам-фильтра
-const ANTI_SPAM_DELAY = 10000; // 10 секунд
+const ANTI_SPAM_DELAY = 10000; // 10 секунд между событиями от одного посетителя
 const VISITOR_CACHE_TTL = 30 * 60 * 1000; // 30 минут для очистки кэша посетителей
 const MAX_VISITOR_EVENTS = 100; // Максимальное количество событий в кэше для одного посетителя
 

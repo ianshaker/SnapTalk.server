@@ -156,45 +156,7 @@ export function generateWidgetCore() {
       }
     }
     
-    // Автоматический трекинг визита пользователя
-    async trackVisit() {
-      if (!this.visitorId) {
-        console.warn('⚠️ Cannot track visit: visitorId not available');
-        return;
-      }
-      
-      try {
-        const meta = {
-          title: document.title,
-          ref: document.referrer,
-          url: window.location.href,
-          userAgent: navigator.userAgent,
-          utm: this.trackingService.extractUTMParams()
-        };
-        
-        const response = await fetch(SERVER_URL + '/api/visit/track', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            clientId: CLIENT_ID,
-            apiKey: API_KEY,
-            visitorId: this.visitorId,
-            requestId: this.requestId,
-            url: window.location.href,
-            meta: meta
-          })
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          console.log('👤 Visit tracked successfully:', result);
-        } else {
-          console.warn('⚠️ Visit tracking failed:', response.status);
-        }
-      } catch (error) {
-        console.warn('⚠️ Visit tracking error:', error);
-      }
-    }
+
     
 
     

@@ -3,7 +3,14 @@ import { findClientBySiteKey } from './clientCache.js';
 import { savePageEvent } from './database.js';
 import { prepareEventData, logWithTimestamp } from './utils.js';
 import { sendTelegramNotification } from './notifications.js';
-import { saveSiteVisit } from '../../services/telegramService.js';
+import { saveSiteVisit, updateSiteVisitOnSessionEnd } from '../../services/telegramService.js';
+import { createClient } from '@supabase/supabase-js';
+import visitorCache from '../../utils/cache/VisitorCache.js'; // 🔥 NEW
+
+// Инициализация Supabase клиента
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const sb = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Обработка session tracking событий
@@ -85,29 +92,41 @@ export async function trackSession(req, res) {
     const savedEvent = await savePageEvent(eventData);
     logWithTimestamp(`✅ Session event '${eventType}' saved with ID: ${savedEvent.id}`);
 
-    // Сохранение визита в таблицу site_visits для session событий
-    logWithTimestamp(`📊 About to call saveSiteVisit for session event ${eventType}, visitor ${visitorId}`);
-    try {
-      await saveSiteVisit(
-        client.id,
-        visitorId, // Используем исходный visitorId из req.body
-        eventData.request_id,
-        eventData.page_url,
-        {
-          title: eventData.page_title,
-          ref: eventData.referrer,
-          utm: eventData.utm_data
-        },
-        eventData.user_agent,
-        eventData.ip_address
-      );
-      logWithTimestamp(`📊 saveSiteVisit completed successfully for session event ${eventType}, visitor ${visitorId}`);
-    } catch (siteVisitError) {
-      logWithTimestamp(`❌ Failed to save site visit for session event: ${siteVisitError.message}`);
-      logWithTimestamp(`❌ saveSiteVisit error details:`, siteVisitError);
+    // Обрабатываем site_visits в зависимости от типа события
+    if (eventType === 'session_start') {
+      logWithTimestamp(`📊 About to call saveSiteVisit for session_start, visitor ${visitorId}`);
+      try {
+        await saveSiteVisit(
+          client.id,
+          visitorId, // Используем исходный visitorId из req.body
+          eventData.request_id,
+          eventData.page_url,
+          {
+            title: eventData.page_title,
+            ref: eventData.referrer,
+            utm: eventData.utm_data
+          },
+          eventData.user_agent,
+          eventData.ip_address
+        );
+        logWithTimestamp(`📊 saveSiteVisit completed successfully for session_start, visitor ${visitorId}`);
+      } catch (siteVisitError) {
+        logWithTimestamp(`❌ Failed to save site visit for session_start: ${siteVisitError.message}`);
+        logWithTimestamp(`❌ saveSiteVisit error details:`, siteVisitError);
+      }
+    } else if (eventType === 'session_end') {
+      // Обновляем существующую запись при завершении сессии
+      logWithTimestamp(`📊 About to call updateSiteVisitOnSessionEnd for session_end, visitor ${visitorId}`);
+      try {
+        await updateSiteVisitOnSessionEnd(visitorId, sessionData.sessionDuration);
+        logWithTimestamp(`📊 updateSiteVisitOnSessionEnd completed successfully for session_end, visitor ${visitorId}`);
+      } catch (updateVisitError) {
+        logWithTimestamp(`❌ Failed to update site visit for session_end: ${updateVisitError.message}`);
+        logWithTimestamp(`❌ updateSiteVisitOnSessionEnd error details:`, updateVisitError);
+      }
     }
 
-    // Отправка Telegram уведомления для session событий
+    // Отправка Telegram уведомления для session событий (ПЕРЕД обновлением статуса!)
     if (client.telegram_bot_token && client.telegram_group_id && ['session_start', 'session_end', 'tab_switch'].includes(eventType)) {
       try {
         // Отладочное логирование перед вызовом sendTelegramNotification
@@ -124,6 +143,39 @@ export async function trackSession(req, res) {
       } catch (telegramError) {
         logWithTimestamp(`❌ Telegram notification failed: ${telegramError.message}`);
         // Не прерываем выполнение, если уведомление не отправилось
+      }
+    }
+
+    // Обновление last_session_status при начале и завершении сессии (ПОСЛЕ отправки уведомления!)
+    if ((eventType === 'session_start' || eventType === 'session_end') && visitorId) {
+      try {
+        let lastSessionStatus;
+        
+        if (eventType === 'session_start') {
+          lastSessionStatus = 'active';
+        } else if (eventType === 'session_end') {
+          // Определяем тип завершения сессии
+          const sessionEndReason = req.body.reason || 'closed';
+          lastSessionStatus = sessionEndReason === 'inactivity' ? 'timeout' : 'closed';
+        }
+        
+        const { error } = await sb
+          .from('client_topics')
+          .update({ 
+            last_session_status: lastSessionStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('visitor_id', visitorId);
+        
+        if (error) {
+          logWithTimestamp(`❌ Failed to update last_session_status: ${error.message}`);
+        } else {
+          logWithTimestamp(`✅ Updated last_session_status to '${lastSessionStatus}' for visitor ${visitorId}`);
+          // 🔥 NEW: Update cache
+          visitorCache.updateLastSessionStatus(visitorId, lastSessionStatus);
+        }
+      } catch (updateError) {
+        logWithTimestamp(`❌ Error updating last_session_status: ${updateError.message}`);
       }
     }
 

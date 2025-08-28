@@ -38,24 +38,7 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
       };
     }
     
-    // Сохранение визита в таблицу site_visits
-    try {
-      await saveSiteVisit(
-        client.id,
-        visitorId,
-        eventData.request_id,
-        eventData.page_url,
-        {
-          title: eventData.page_title,
-          ref: eventData.referrer,
-          utm: eventData.utm_data
-        },
-        eventData.user_agent,
-        eventData.ip_address
-      );
-    } catch (siteVisitError) {
-      logWithTimestamp(`❌ Site visit save error: ${siteVisitError.message}`);
-    }
+    // Сохранение визита перенесено в session.js для предотвращения дублирования
     
     // Проверка конфигурации Telegram (после сохранения визита)
     if (!client.telegram_group_id || !client.telegram_bot_token) {
@@ -105,7 +88,30 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
           }
         );
     
+
+    
     const isExistingVisitor = topicInfo && typeof topicInfo === 'object' && topicInfo.isExistingVisitor;
+    const lastSessionStatus = topicInfo && typeof topicInfo === 'object' ? topicInfo.lastSessionStatus : null;
+    
+    // 🔍 ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ ДЛЯ ОТЛАДКИ
+    logWithTimestamp(`🔍 DEBUG visitor ${visitorId.slice(0,8)}:`);
+    logWithTimestamp(`🔍   topicInfo:`, JSON.stringify(topicInfo, null, 2));
+    logWithTimestamp(`🔍   isExistingVisitor: ${isExistingVisitor}`);
+    logWithTimestamp(`🔍   lastSessionStatus: ${lastSessionStatus}`);
+    logWithTimestamp(`🔍   event_type: ${eventData.event_type}`);
+    
+    // Проверяем, нужно ли пропустить page_view уведомление
+    // Если это page_view событие сразу после session_start, пропускаем его
+    if (eventData.event_type === 'page_view' && eventData.isSessionStart) {
+      logWithTimestamp(`📊 Пропускаем page_view уведомление для visitor ${visitorId.slice(0,8)} - это событие сразу после session_start`);
+      return {
+        success: true,
+        skipped: true,
+        reason: 'page_view_after_session_start',
+        visitorId: visitorId,
+        siteId: client.id
+      };
+    }
     
     // Форматирование сообщения в зависимости от типа события
     let message;
@@ -120,24 +126,37 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
     switch (eventData.event_type) {
       case 'tab_switch':
         message = `🔄 Клиент переключил вкладку\n` +
-                 `👤 ${shortVisitorId} • ${timeStr}\n` +
-                 `📄 ${eventData.page_title || eventData.page_url}`;
+                 `${shortVisitorId} • ${timeStr}\n` +
+                 `${eventData.page_title || eventData.page_url}`;
         break;
       case 'session_end':
         const duration = eventData.session_duration ? 
           `${Math.round(eventData.session_duration / 1000)}с` : '?';
         message = `🔚 Клиент завершил сессию\n` +
-                 `👤 ${shortVisitorId} • ${timeStr} • ⏱️${duration}\n` +
-                 `📄 ${eventData.page_title || eventData.page_url}`;
+                 `${shortVisitorId} • ${timeStr} • ⏱️${duration}\n` +
+                 `${eventData.page_title || eventData.page_url}`;
         break;
       case 'page_view':
       case 'session_start':
       default:
-        const device = eventData.user_agent?.includes('Mobile') ? '📱' : '💻';
-        message = `👋 Новый посетитель\n` +
-                 `👤 ${shortVisitorId} • ${timeStr} • ${device}\n` +
-                 `📄 ${eventData.page_title || eventData.page_url}\n` +
+        // Определяем тип посетителя на основе isExistingVisitor и last_session_status
+        let visitorType;
+        if (!isExistingVisitor) {
+          visitorType = '👋 Новый посетитель';
+        } else if (lastSessionStatus === 'closed') {
+          visitorType = '🔄 ВОЗВРАТ ПОСЛЕ ЗАКРЫТИЯ САЙТА';
+        } else if (lastSessionStatus === 'timeout') {
+          visitorType = '⏰ ВОЗВРАТ ПОСЛЕ ТАЙМАУТА';
+        } else {
+          visitorType = '📄 Переход между страницами';
+        }
+        
+        message = `${visitorType}\n` +
+                 `${shortVisitorId} • ${timeStr}\n` +
+                 `${eventData.page_title || eventData.page_url}\n` +
                  `🔗 ${eventData.referrer || 'Прямой переход'}`;
+        
+
         break;
     }
     
