@@ -123,18 +123,23 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
       month: '2-digit'
     });
     
+    // Безопасное получение значений с проверкой на undefined
+    const safePageTitle = eventData.page_title && eventData.page_title !== 'undefined' ? eventData.page_title : null;
+    const safePageUrl = eventData.page_url && eventData.page_url !== 'undefined' ? eventData.page_url : 'Неизвестная страница';
+    const safeReferrer = eventData.referrer && eventData.referrer !== 'undefined' ? eventData.referrer : 'Прямой переход';
+    
     switch (eventData.event_type) {
       case 'tab_switch':
         message = `🔄 Клиент переключил вкладку\n` +
                  `${shortVisitorId} • ${timeStr}\n` +
-                 `${eventData.page_title || eventData.page_url}`;
+                 `${safePageTitle || safePageUrl}`;
         break;
       case 'session_end':
         const duration = eventData.session_duration ? 
           `${Math.round(eventData.session_duration / 1000)}с` : '?';
         message = `🔚 Клиент завершил сессию\n` +
                  `${shortVisitorId} • ${timeStr} • ⏱️${duration}\n` +
-                 `${eventData.page_title || eventData.page_url}`;
+                 `${safePageTitle || safePageUrl}`;
         break;
       case 'page_view':
       case 'session_start':
@@ -153,8 +158,8 @@ export async function sendTelegramNotification(client, eventData, visitorId) {
         
         message = `${visitorType}\n` +
                  `${shortVisitorId} • ${timeStr}\n` +
-                 `${eventData.page_title || eventData.page_url}\n` +
-                 `🔗 ${eventData.referrer || 'Прямой переход'}`;
+                 `${safePageTitle || safePageUrl}\n` +
+                 `🔗 ${safeReferrer}`;
         
 
         break;
