@@ -4,13 +4,8 @@ import { savePageEvent } from './database.js';
 import { prepareEventData, logWithTimestamp } from './utils.js';
 import { sendTelegramNotification } from './notifications.js';
 import { saveSiteVisit, updateSiteVisitOnSessionEnd } from '../../services/telegramService.js';
-import { createClient } from '@supabase/supabase-js';
+import { sb } from '../../config/env.js';
 import visitorCache from '../../utils/cache/VisitorCache.js'; // 🔥 NEW
-
-// Инициализация Supabase клиента
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const sb = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Обработка session tracking событий
