@@ -71,6 +71,7 @@ class VisitorCache {
       topicId: data.topicId || data.topic_id,
       clientId: data.clientId || data.client_id,
       pageUrl: data.pageUrl || data.page_url,
+      lastSessionStatus: data.lastSessionStatus || data.last_session_status || 'active', // 🔥 NEW
       timestamp: Date.now()
     });
     
@@ -131,7 +132,10 @@ class VisitorCache {
         
         // Сохраняем результат в кэш, если он валидный
         if (result && result.topic_id) {
-          this.setCachedVisitor(visitorId, result);
+          this.setCachedVisitor(visitorId, {
+            ...result,
+            lastSessionStatus: result.last_session_status // 🔥 NEW
+          });
         }
         
         return result;
@@ -167,6 +171,22 @@ class VisitorCache {
         timestamp: Date.now() // Обновляем timestamp
       });
       console.log(`🔄 Updated cache for visitor ${visitorId.slice(0,8)}...`);
+    }
+  }
+
+  /**
+   * 🆕 Обновление статуса последней сессии в кэше
+   * @param {string} visitorId - ID посетителя
+   * @param {string} status - Новый статус сессии
+   */
+  updateLastSessionStatus(visitorId, status) {
+    if (!visitorId || !status) return;
+    
+    const existing = this.dataCache.get(visitorId);
+    if (existing) {
+      existing.lastSessionStatus = status;
+      existing.timestamp = Date.now();
+      console.log(`🔄 Updated last_session_status to '${status}' in cache for visitor ${visitorId.slice(0,8)}...`);
     }
   }
 

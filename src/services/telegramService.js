@@ -125,12 +125,13 @@ export async function findExistingVisitor(clientId, visitorId) {
   return await visitorCache.processWithLock(visitorId, async () => {
     const { data, error } = await sb
       .from('client_topics')
-      .select('topic_id, visitor_id, created_at, page_url, client_id')
+      .select('topic_id, visitor_id, created_at, page_url, client_id, last_session_status')
+      .eq('client_id', clientId)
       .eq('visitor_id', visitorId)
       .maybeSingle();
     
     if (error) {
-      console.error('❌ findExistingVisitor error:', error);
+      console.error('❌ findExistingVisitorForClient error:', error);
       return null;
     }
     
@@ -174,6 +175,7 @@ export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId
     utm_source: meta?.utm?.source || null,
     utm_medium: meta?.utm?.medium || null,
     utm_campaign: meta?.utm?.campaign || null,
+    last_session_status: 'active', // 🔥 НОВОЕ: устанавливаем статус сессии
     visit_type: 'page_visit', // 🔥 ДОБАВЛЕНО: обязательное поле из схемы!
     updated_at: new Date().toISOString(), // 🔥 ДОБАВЛЕНО: время обновления
     fingerprint_data: visitorId ? { 
@@ -211,6 +213,7 @@ export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId
           utm_source: topicData.utm_source,
           utm_medium: topicData.utm_medium,
           utm_campaign: topicData.utm_campaign,
+          last_session_status: 'active', // 🔥 НОВОЕ: обновляем статус сессии
           updated_at: topicData.updated_at,
           fingerprint_data: topicData.fingerprint_data
           // НЕ обновляем: client_id, topic_id (оставляем оригинальные!)
@@ -279,6 +282,62 @@ export async function dbSaveTopic(clientId, topicId, visitorId = null, requestId
 }
 
 // ===== Site Visits Tracking =====
+// 🆕 Функция для обновления существующей записи site_visits при завершении сессии
+export async function updateSiteVisitOnSessionEnd(visitorId, sessionDuration = null) {
+  if (!sb) {
+    console.log('⚠️ Supabase not available - skipping site_visits update');
+    return;
+  }
+
+  try {
+    // Находим существующую запись для этого visitor_id сегодня
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const { data: existingVisit, error: findError } = await sb
+      .from('site_visits')
+      .select('id')
+      .eq('visitor_id', visitorId)
+      .gte('created_at', today.toISOString())
+      .lt('created_at', tomorrow.toISOString())
+      .maybeSingle();
+    
+    if (findError) {
+      console.error('❌ Error finding site visit to update:', findError);
+      return;
+    }
+    
+    if (!existingVisit) {
+      console.log(`⚠️ No existing site visit found for visitor ${visitorId.slice(0,8)}... - cannot update`);
+      return;
+    }
+
+    // Обновляем запись с временем завершения сессии
+    const updateData = {
+      session_end_time: new Date().toISOString()
+    };
+    
+    if (sessionDuration !== null) {
+      updateData.session_duration = sessionDuration;
+    }
+    
+    const { error: updateError } = await sb
+      .from('site_visits')
+      .update(updateData)
+      .eq('id', existingVisit.id);
+
+    if (updateError) {
+      console.error('❌ updateSiteVisitOnSessionEnd error:', updateError);
+    } else {
+      console.log(`✅ Site visit updated on session end: ${existingVisit.id} [${visitorId.slice(0,8)}...]`);
+    }
+  } catch (error) {
+    console.error('❌ updateSiteVisitOnSessionEnd error:', error);
+  }
+}
+
 // 🆕 Функция для записи каждого визита в таблицу site_visits
 export async function saveSiteVisit(clientId, visitorId, requestId, url, meta, userAgent = null, ipAddress = null) {
   if (!sb) {
@@ -287,6 +346,29 @@ export async function saveSiteVisit(clientId, visitorId, requestId, url, meta, u
   }
 
   try {
+    // Проверяем, существует ли уже запись для этого visitor_id сегодня
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const { data: existingVisit, error: checkError } = await sb
+      .from('site_visits')
+      .select('id, created_at')
+      .eq('visitor_id', visitorId)
+      .gte('created_at', today.toISOString())
+      .lt('created_at', tomorrow.toISOString())
+      .maybeSingle();
+    
+    if (checkError) {
+      console.error('❌ Error checking existing site visit:', checkError);
+    }
+    
+    if (existingVisit) {
+      console.log(`⚠️ Site visit already exists for visitor ${visitorId.slice(0,8)}... today - skipping duplicate`);
+      return;
+    }
+
     const siteVisitData = {
       client_id: clientId,
       visitor_id: visitorId,
@@ -340,14 +422,18 @@ export async function ensureTopicForVisitorForClient(clientId, client, visitorId
       const botToken = client?.telegram_bot_token || BOT_TOKEN;
       const groupId = client?.telegram_group_id || SUPERGROUP_ID;
       
-      const isValidTopic = await isTopicValidInTelegram(botToken, groupId, existingVisitor.topic_id);
+      // 🔥 ИСПРАВЛЕНИЕ: кэшированные данные используют topicId, а не topic_id
+      const topicId = existingVisitor.topicId || existingVisitor.topic_id;
+      const isValidTopic = await isTopicValidInTelegram(botToken, groupId, topicId);
       if (isValidTopic) {
         
-        // Обновляем метаданные последнего визита
-        try {
-          const { error } = await sb
-            .from('client_topics')
-            .update({
+        // БОЛЬШЕ НЕ ОБНОВЛЯЕМ СТАТУС В ФОНЕ. Только возвращаем то, что в базе.
+        const lastSessionStatus = existingVisitor.last_session_status || 'active';
+
+        // Асинхронно обновляем метаданные (без статуса)
+        (async () => {
+          try {
+            const updateData = {
               page_url: url,
               page_title: meta?.title || null,
               referrer: meta?.ref || null,
@@ -355,28 +441,33 @@ export async function ensureTopicForVisitorForClient(clientId, client, visitorId
               utm_medium: meta?.utm?.medium || null,
               utm_campaign: meta?.utm?.campaign || null,
               updated_at: new Date().toISOString(),
-              fingerprint_data: visitorId ? { 
-                visitorId, 
-                requestId, 
+              fingerprint_data: visitorId ? {
+                visitorId,
+                requestId,
                 url,
                 meta,
-                timestamp: new Date().toISOString() 
+                timestamp: new Date().toISOString()
               } : null
-            })
-            .eq('client_id', clientId)
-            .eq('visitor_id', visitorId);
-          
-          if (error) console.error('❌ Update existing visitor error:', error);
-        } catch (error) {
-          console.error('❌ Update existing visitor error:', error);
-        }
-        
+            };
+
+            const { error } = await sb
+              .from('client_topics')
+              .update(updateData)
+              .eq('visitor_id', visitorId);
+
+            if (error) console.error('❌ Background metadata update error:', error);
+          } catch (error) {
+            console.error('❌ Background metadata update error:', error);
+          }
+        })();
+
         return {
-          topicId: existingVisitor.topic_id,
+          topicId: topicId,
           isExistingVisitor: true,
-          previousUrl: existingVisitor.page_url,
+          previousUrl: existingVisitor.page_url || existingVisitor.pageUrl,
           firstVisit: existingVisitor.created_at,
-          originalClientId: existingVisitor.client_id
+          originalClientId: existingVisitor.client_id || existingVisitor.clientId,
+          lastSessionStatus: lastSessionStatus // Возвращаем актуальный статус из базы
         };
       }
     }
@@ -396,7 +487,9 @@ export async function ensureTopicForVisitor(clientId, client, visitorId = null, 
       const botToken = client?.telegram_bot_token || BOT_TOKEN;
       const groupId = client?.telegram_group_id || SUPERGROUP_ID;
       
-      const isValidTopic = await isTopicValidInTelegram(botToken, groupId, existingVisitor.topic_id);
+      // 🔥 ИСПРАВЛЕНИЕ: кэшированные данные используют topicId, а не topic_id
+      const topicId = existingVisitor.topicId || existingVisitor.topic_id;
+      const isValidTopic = await isTopicValidInTelegram(botToken, groupId, topicId);
       if (isValidTopic) {
         
         // Обновляем метаданные последнего визита
@@ -410,6 +503,7 @@ export async function ensureTopicForVisitor(clientId, client, visitorId = null, 
               utm_source: meta?.utm?.source || null,
               utm_medium: meta?.utm?.medium || null,
               utm_campaign: meta?.utm?.campaign || null,
+              // НЕ обновляем last_session_status - сохраняем существующий статус
               updated_at: new Date().toISOString(),
               fingerprint_data: visitorId ? { 
                 visitorId, 
@@ -419,7 +513,6 @@ export async function ensureTopicForVisitor(clientId, client, visitorId = null, 
                 timestamp: new Date().toISOString() 
               } : null
             })
-            .eq('client_id', clientId)
             .eq('visitor_id', visitorId);
           
           if (error) console.error('❌ Update existing visitor error:', error);
@@ -428,11 +521,12 @@ export async function ensureTopicForVisitor(clientId, client, visitorId = null, 
         }
         
         return {
-          topicId: existingVisitor.topic_id,
+          topicId: topicId,
           isExistingVisitor: true,
-          previousUrl: existingVisitor.page_url,
+          previousUrl: existingVisitor.page_url || existingVisitor.pageUrl,
           firstVisit: existingVisitor.created_at,
-          originalClientId: existingVisitor.client_id
+          originalClientId: existingVisitor.client_id || existingVisitor.clientId,
+          lastSessionStatus: existingVisitor.last_session_status || 'active'
         };
       }
     }
@@ -483,7 +577,8 @@ export async function createNewTopic(clientId, client, visitorId = null, request
   
   return {
     topicId,
-    isExistingVisitor: false
+    isExistingVisitor: false,
+    lastSessionStatus: 'active'
   };
 }
 
