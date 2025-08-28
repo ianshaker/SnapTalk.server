@@ -13,6 +13,11 @@ export class SessionTracker {
     this.lastActivityTime = Date.now();
     this.sessionInactivityTimeout = 30 * 60 * 1000; // 30 минут
     this.sessionInactivityTimer = null;
+    
+    // Page close detection properties
+    this.pageCloseDetectionTimer = null;
+    this.pageCloseDetectionTimeout = 5000; // 5 секунд для детектирования закрытия
+    this.sessionEndSent = false; // Флаг для предотвращения дублирования session_end
   }
 
   // Обновление идентификаторов после инициализации
@@ -32,15 +37,28 @@ export class SessionTracker {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         this.trackSessionEvent('tab_switch', { action: 'hidden' });
+        // Устанавливаем таймер для детектирования закрытия вкладки
+        this.setPageCloseDetectionTimer();
       } else {
         this.trackSessionEvent('tab_switch', { action: 'visible' });
         this.updateLastActivity();
+        // Отменяем таймер закрытия, если вкладка снова стала видимой
+        this.clearPageCloseDetectionTimer();
       }
     });
     
-    // Отслеживание закрытия страницы
+    // Отслеживание закрытия страницы (множественные обработчики для надежности)
     window.addEventListener('beforeunload', () => {
-      this.trackSessionEvent('session_end');
+      this.trackSessionEvent('session_end', { reason: 'beforeunload' });
+    });
+    
+    window.addEventListener('pagehide', () => {
+      this.trackSessionEvent('session_end', { reason: 'pagehide' });
+    });
+    
+    // Обработка unload как резервный вариант
+    window.addEventListener('unload', () => {
+      this.trackSessionEvent('session_end', { reason: 'unload' });
     });
     
     // Запускаем таймер неактивности
@@ -60,7 +78,7 @@ export class SessionTracker {
     }
     
     this.sessionInactivityTimer = setTimeout(() => {
-      if (this.isSessionActive) {
+      if (this.isSessionActive && !this.sessionEndSent) {
         this.trackSessionEvent('session_end', { reason: 'inactivity' });
         this.isSessionActive = false;
       }
@@ -71,6 +89,12 @@ export class SessionTracker {
   async trackSessionEvent(eventType, additionalData = {}) {
     if (!this.visitorId) {
       console.warn('⚠️ Cannot track session event: visitorId not available');
+      return;
+    }
+    
+    // Предотвращаем дублирование session_end событий
+    if (eventType === 'session_end' && this.sessionEndSent) {
+      console.log('🔄 Session end already sent, skipping duplicate');
       return;
     }
     
@@ -92,6 +116,8 @@ export class SessionTracker {
         payload.isSessionEnd = true;
         payload.sessionDuration = Date.now() - this.sessionStartTime;
         this.isSessionActive = false;
+        this.sessionEndSent = true; // Устанавливаем флаг
+        this.clearPageCloseDetectionTimer(); // Отменяем таймер
       } else if (eventType === 'session_start') {
         payload.isSessionStart = true;
       }
@@ -123,11 +149,33 @@ export class SessionTracker {
     };
   }
 
+  // Установка таймера для детектирования закрытия вкладки
+  setPageCloseDetectionTimer() {
+    this.clearPageCloseDetectionTimer();
+    
+    this.pageCloseDetectionTimer = setTimeout(() => {
+      // Если вкладка скрыта более 5 секунд, считаем что она закрыта
+      if (document.hidden && !this.sessionEndSent) {
+        this.trackSessionEvent('session_end', { reason: 'tab_close_detected' });
+      }
+    }, this.pageCloseDetectionTimeout);
+  }
+  
+  // Отмена таймера детектирования закрытия вкладки
+  clearPageCloseDetectionTimer() {
+    if (this.pageCloseDetectionTimer) {
+      clearTimeout(this.pageCloseDetectionTimer);
+      this.pageCloseDetectionTimer = null;
+    }
+  }
+
   // Очистка таймеров при уничтожении
   destroy() {
     if (this.sessionInactivityTimer) {
       clearTimeout(this.sessionInactivityTimer);
       this.sessionInactivityTimer = null;
     }
+    
+    this.clearPageCloseDetectionTimer();
   }
 }
