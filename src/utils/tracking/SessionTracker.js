@@ -42,16 +42,16 @@ export class SessionTracker {
     
     // Отслеживание закрытия страницы (множественные обработчики для надежности)
     window.addEventListener('beforeunload', () => {
-      this.trackSessionEvent('session_end', { reason: 'beforeunload' });
+      this.sendSessionEventBeacon('session_end', { reason: 'beforeunload' });
     });
     
     window.addEventListener('pagehide', () => {
-      this.trackSessionEvent('session_end', { reason: 'pagehide' });
+      this.sendSessionEventBeacon('session_end', { reason: 'pagehide' });
     });
     
     // Обработка unload как резервный вариант
     window.addEventListener('unload', () => {
-      this.trackSessionEvent('session_end', { reason: 'unload' });
+      this.sendSessionEventBeacon('session_end', { reason: 'unload' });
     });
     
     // Запускаем таймер неактивности
@@ -76,6 +76,63 @@ export class SessionTracker {
         this.isSessionActive = false;
       }
     }, this.sessionInactivityTimeout);
+  }
+
+  // Отправка session события через sendBeacon для надежности при закрытии страницы
+  sendSessionEventBeacon(eventType, additionalData = {}) {
+    if (!this.visitorId) {
+      console.warn('⚠️ Cannot track session event: visitorId not available');
+      return;
+    }
+    
+    // Предотвращаем дублирование session_end событий
+    if (eventType === 'session_end' && this.sessionEndSent) {
+      console.log('🔄 Session end already sent, skipping duplicate');
+      return;
+    }
+    
+    try {
+      const payload = {
+        siteKey: this.apiKey,
+        visitorId: this.visitorId,
+        requestId: this.requestId,
+        eventType: eventType,
+        url: window.location.href,
+        title: document.title,
+        userAgent: navigator.userAgent,
+        isSessionActive: this.isSessionActive,
+        ...additionalData
+      };
+      
+      // Для session_end добавляем специальные поля
+      if (eventType === 'session_end') {
+        payload.isSessionEnd = true;
+        payload.sessionDuration = Date.now() - this.sessionStartTime;
+        this.isSessionActive = false;
+        this.sessionEndSent = true;
+      }
+      
+      // Используем sendBeacon для надежной отправки при закрытии страницы
+      if (navigator.sendBeacon) {
+        const success = navigator.sendBeacon(
+          this.serverUrl + '/api/track/session',
+          JSON.stringify(payload)
+        );
+        console.log(`🔄 Session event '${eventType}' sent via beacon:`, success);
+        return success;
+      } else {
+        // Fallback для старых браузеров
+        console.warn('⚠️ sendBeacon not supported, using synchronous XHR');
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', this.serverUrl + '/api/track/session', false);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(JSON.stringify(payload));
+        return true;
+      }
+    } catch (error) {
+      console.warn(`⚠️ Session event '${eventType}' beacon error:`, error);
+      return false;
+    }
   }
 
   // Отправка session события
