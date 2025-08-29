@@ -314,14 +314,15 @@ export async function updateSiteVisitOnSessionEnd(visitorId, sessionDuration = n
       return;
     }
 
-    // Обновляем запись с временем завершения сессии
-    const updateData = {
-      session_end_time: new Date().toISOString()
-    };
+    // Обновляем запись с длительностью сессии
+    const updateData = {};
     
     if (sessionDuration !== null) {
       updateData.session_duration = sessionDuration;
     }
+    
+    // Обновляем updated_at для отметки времени завершения сессии
+    updateData.updated_at = new Date().toISOString();
     
     const { error: updateError } = await sb
       .from('site_visits')
