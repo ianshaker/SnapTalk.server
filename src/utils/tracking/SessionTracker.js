@@ -114,9 +114,13 @@ export class SessionTracker {
       
       // Используем sendBeacon для надежной отправки при закрытии страницы
       if (navigator.sendBeacon) {
+        // Создаем Blob с правильным Content-Type для корректной обработки сервером
+        const blob = new Blob([JSON.stringify(payload)], {
+          type: 'application/json'
+        });
         const success = navigator.sendBeacon(
           this.serverUrl + '/api/track/session',
-          JSON.stringify(payload)
+          blob
         );
         console.log(`🔄 Session event '${eventType}' sent via beacon:`, success);
         return success;
