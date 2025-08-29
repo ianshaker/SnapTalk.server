@@ -13,8 +13,19 @@ import visitorCache from '../../utils/cache/VisitorCache.js'; // 🔥 NEW
  */
 export async function trackSession(req, res) {
   try {
+    // Обработка sendBeacon данных (могут прийти как текст)
+    let requestBody = req.body;
+    if (typeof req.body === 'string') {
+      try {
+        requestBody = JSON.parse(req.body);
+      } catch (error) {
+        logWithTimestamp(`❌ Failed to parse JSON from sendBeacon: ${error.message}`);
+        return res.status(400).json({ error: 'Invalid JSON format' });
+      }
+    }
+
     // Валидация входящих данных
-    const validationResult = validateSessionTrackingData(req.body);
+    const validationResult = validateSessionTrackingData(requestBody);
     if (!validationResult.isValid) {
       logWithTimestamp(`❌ Session validation failed: ${validationResult.errors.join(', ')}`);
       return res.status(400).json({ 
@@ -23,7 +34,7 @@ export async function trackSession(req, res) {
       });
     }
 
-    const { siteKey, visitorId, eventType, requestId } = req.body;
+    const { siteKey, visitorId, eventType, requestId } = requestBody;
 
     // Получение клиента по site key
     const client = await findClientBySiteKey(siteKey);
@@ -51,7 +62,7 @@ export async function trackSession(req, res) {
       case 'session_end':
         sessionData.isSessionEnd = true;
         sessionData.isSessionActive = false;
-        sessionData.sessionDuration = req.body.sessionDuration || null;
+        sessionData.sessionDuration = requestBody.sessionDuration || null;
         break;
       
       case 'tab_switch':
@@ -68,11 +79,11 @@ export async function trackSession(req, res) {
       clientId: client.id,
       visitorId: visitorId,
       requestId: requestId,
-      url: req.body.url || null,
-      title: req.body.title || null,
-      referrer: req.body.referrer || null,
-      utm: req.body.utm || null,
-      userAgent: req.body.userAgent || req.headers['user-agent'],
+      url: requestBody.url || null,
+      title: requestBody.title || null,
+      referrer: requestBody.referrer || null,
+      utm: requestBody.utm || null,
+      userAgent: requestBody.userAgent || req.headers['user-agent'],
       ipAddress: req.ip,
       timestamp: new Date().toISOString(),
       // Session tracking поля
@@ -93,7 +104,7 @@ export async function trackSession(req, res) {
       try {
         await saveSiteVisit(
           client.id,
-          visitorId, // Используем исходный visitorId из req.body
+          visitorId, // Используем исходный visitorId из requestBody
           eventData.request_id,
           eventData.page_url,
           {
@@ -150,7 +161,7 @@ export async function trackSession(req, res) {
           lastSessionStatus = 'active';
         } else if (eventType === 'session_end') {
           // Определяем тип завершения сессии
-          const sessionEndReason = req.body.reason || 'closed';
+          const sessionEndReason = requestBody.reason || 'closed';
           lastSessionStatus = sessionEndReason === 'inactivity' ? 'timeout' : 'closed';
         }
         

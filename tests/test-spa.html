@@ -63,6 +63,12 @@
         <button onclick="simulatePageClose()" style="background: #fd7e14;">❌ Имитация закрытия страницы</button>
         <button onclick="simulateTabSwitch()" style="background: #e83e8c;">🔄 Переключение вкладки</button>
         <button onclick="simulateSessionEnd()" style="background: #6c757d;">⏹️ Завершение сессии</button>
+        <br><br>
+        <strong>Мониторинг и диагностика сессий:</strong><br>
+        <button onclick="forceCheckSessionEnd()" style="background: #17a2b8;">🔍 Проверить завершение сессии</button>
+        <button onclick="startSessionMonitoring()" style="background: #28a745;">▶️ Запустить мониторинг</button>
+        <button onclick="stopSessionMonitoring()" style="background: #dc3545;">⏹️ Остановить мониторинг</button>
+        <button onclick="logSessionEndDetails()" style="background: #ffc107; color: black;">📋 Детали сессии</button>
     </div>
     
     <div class="content" id="content">
@@ -411,12 +417,35 @@
             addLog('👋 Реальное событие pagehide', 'log');
         });
         
+        // Переменные для мониторинга сессии
+        let sessionMonitorInterval = null;
+        let lastSessionStatus = null;
+        let sessionEndDetected = false;
+        let sessionStartTime = Date.now();
+        
         // Функция для отображения статуса сессии
         function displaySessionStatus() {
             if (window.SnapTalkWidget && window.SnapTalkWidget.sessionTracker) {
                 try {
                     const status = window.SnapTalkWidget.sessionTracker.getSessionStatus();
-                    addLog(`📊 Статус сессии: активна=${status.isActive}, длительность=${Math.round(status.duration/1000)}с`, 'log');
+                    const currentTime = Date.now();
+                    const sessionDuration = Math.round((currentTime - sessionStartTime) / 1000);
+                    
+                    // Проверяем изменение статуса сессии
+                    if (lastSessionStatus && lastSessionStatus.isActive !== status.isActive) {
+                        if (!status.isActive && !sessionEndDetected) {
+                            addLog(`🔴 СЕССИЯ ЗАВЕРШЕНА! Длительность: ${sessionDuration}с`, 'warn');
+                            sessionEndDetected = true;
+                            logSessionEndDetails();
+                        } else if (status.isActive && sessionEndDetected) {
+                            addLog(`🟢 СЕССИЯ ВОЗОБНОВЛЕНА! Новое время старта: ${new Date().toLocaleTimeString()}`, 'log');
+                            sessionEndDetected = false;
+                            sessionStartTime = currentTime;
+                        }
+                    }
+                    
+                    addLog(`📊 Статус сессии: активна=${status.isActive}, длительность=${Math.round(status.duration/1000)}с, общее время=${sessionDuration}с`, 'log');
+                    lastSessionStatus = { ...status };
                 } catch (error) {
                     addLog(`⚠️ Ошибка получения статуса сессии: ${error.message}`, 'warn');
                 }
@@ -431,8 +460,126 @@
             }
         }
         
-        // Показываем статус сессии каждые 10 секунд
-        setInterval(displaySessionStatus, 10000);
+        // Функция для детального логирования завершения сессии
+        function logSessionEndDetails() {
+            addLog('🔍 === ДЕТАЛИ ЗАВЕРШЕНИЯ СЕССИИ ===', 'warn');
+            addLog(`⏰ Время завершения: ${new Date().toLocaleTimeString()}`, 'log');
+            addLog(`📄 Текущая страница: ${window.location.pathname}`, 'log');
+            addLog(`👁️ Видимость страницы: ${document.visibilityState}`, 'log');
+            addLog(`🖥️ Страница скрыта: ${document.hidden}`, 'log');
+            
+            // Проверяем состояние виджета
+            if (window.SnapTalkWidget) {
+                addLog(`🔧 Состояние виджета:`, 'log');
+                if (window.SnapTalkWidget.sessionTracker) {
+                    try {
+                        const tracker = window.SnapTalkWidget.sessionTracker;
+                        addLog(`  - Visitor ID: ${tracker.visitorId || 'не установлен'}`, 'log');
+                        addLog(`  - Session активна: ${tracker.isSessionActive || false}`, 'log');
+                        addLog(`  - Последнее событие: ${tracker.lastEventType || 'неизвестно'}`, 'log');
+                    } catch (e) {
+                        addLog(`  - Ошибка получения данных трекера: ${e.message}`, 'warn');
+                    }
+                }
+            }
+            addLog('🔍 === КОНЕЦ ДЕТАЛЕЙ ===', 'warn');
+        }
+        
+        // Функция для принудительной проверки завершения сессии
+        function forceCheckSessionEnd() {
+            addLog('🔍 Принудительная проверка завершения сессии...', 'log');
+            
+            if (window.SnapTalkWidget && window.SnapTalkWidget.sessionTracker) {
+                try {
+                    // Получаем текущий статус
+                    const status = window.SnapTalkWidget.sessionTracker.getSessionStatus();
+                    addLog(`📊 Текущий статус: активна=${status.isActive}`, 'log');
+                    
+                    // Если сессия активна, принудительно завершаем её
+                    if (status.isActive) {
+                        addLog('⏹️ Принудительное завершение активной сессии...', 'warn');
+                        window.SnapTalkWidget.sessionTracker.trackSessionEvent('session_end');
+                        
+                        // Проверяем результат через 1 секунду
+                        setTimeout(() => {
+                            const newStatus = window.SnapTalkWidget.sessionTracker.getSessionStatus();
+                            addLog(`📊 Статус после завершения: активна=${newStatus.isActive}`, 'log');
+                            if (!newStatus.isActive) {
+                                addLog('✅ Сессия успешно завершена!', 'log');
+                            } else {
+                                addLog('❌ Сессия всё ещё активна после попытки завершения', 'warn');
+                            }
+                        }, 1000);
+                    } else {
+                        addLog('ℹ️ Сессия уже неактивна', 'log');
+                    }
+                } catch (error) {
+                    addLog(`❌ Ошибка при проверке сессии: ${error.message}`, 'warn');
+                }
+            } else {
+                addLog('❌ SessionTracker недоступен для проверки', 'warn');
+            }
+        }
+        
+        // Функция для запуска мониторинга сессии
+        function startSessionMonitoring() {
+            if (sessionMonitorInterval) {
+                clearInterval(sessionMonitorInterval);
+            }
+            
+            addLog('🔄 Запуск мониторинга сессии (каждые 5 секунд)...', 'log');
+            sessionMonitorInterval = setInterval(() => {
+                displaySessionStatus();
+            }, 5000);
+        }
+        
+        // Функция для остановки мониторинга сессии
+        function stopSessionMonitoring() {
+            if (sessionMonitorInterval) {
+                clearInterval(sessionMonitorInterval);
+                sessionMonitorInterval = null;
+                addLog('⏹️ Мониторинг сессии остановлен', 'log');
+            }
+        }
+        
+        // Расширенные обработчики событий для детектирования завершения сессии
+        let pageCloseDetected = false;
+        
+        // Обработчик для детектирования закрытия страницы
+        window.addEventListener('beforeunload', function(e) {
+            pageCloseDetected = true;
+            addLog('🚪 Детектировано закрытие страницы (beforeunload)', 'warn');
+            if (window.SnapTalkWidget && window.SnapTalkWidget.sessionTracker) {
+                window.SnapTalkWidget.sessionTracker.trackSessionEvent('page_close');
+            }
+        });
+        
+        window.addEventListener('pagehide', function(e) {
+            if (pageCloseDetected) {
+                addLog('👋 Подтверждение закрытия страницы (pagehide)', 'warn');
+                if (window.SnapTalkWidget && window.SnapTalkWidget.sessionTracker) {
+                    window.SnapTalkWidget.sessionTracker.trackSessionEvent('session_end');
+                }
+            }
+        });
+        
+        // Обработчик изменения видимости для детектирования переключения вкладок
+        document.addEventListener('visibilitychange', function() {
+            const state = document.visibilityState;
+            addLog(`🔍 Реальное событие visibilitychange: ${state}`, 'log');
+            
+            if (state === 'hidden') {
+                addLog('📱 Вкладка скрыта - возможное переключение', 'log');
+                if (window.SnapTalkWidget && window.SnapTalkWidget.sessionTracker) {
+                    window.SnapTalkWidget.sessionTracker.trackSessionEvent('tab_hidden');
+                }
+            } else if (state === 'visible') {
+                addLog('👁️ Вкладка снова видима', 'log');
+                if (window.SnapTalkWidget && window.SnapTalkWidget.sessionTracker) {
+                    window.SnapTalkWidget.sessionTracker.trackSessionEvent('tab_visible');
+                }
+            }
+        });
         
         // Инициализация
         updatePageContent(window.location.pathname);
@@ -449,8 +596,34 @@
                 addLog(`- TrackingService: ${!!window.SnapTalkWidget.trackingService}`, 'log');
                 addLog(`- PageTracker: ${!!window.SnapTalkWidget.pageTracker}`, 'log');
                 addLog(`- SessionTracker: ${!!window.SnapTalkWidget.sessionTracker}`, 'log');
+                
+                // Автоматически запускаем мониторинг сессии
+                startSessionMonitoring();
+            } else {
+                addLog('⚠️ Виджет не загружен, повторная попытка через 5 секунд...', 'warn');
+                setTimeout(() => {
+                    if (window.SnapTalkWidget) {
+                        addLog('✅ Виджет загружен при повторной проверке', 'log');
+                        startSessionMonitoring();
+                    } else {
+                        addLog('❌ Виджет так и не загрузился', 'warn');
+                    }
+                }, 5000);
             }
         }, 3000);
+        
+        // Дополнительная проверка статуса каждые 30 секунд
+        setInterval(() => {
+            if (!sessionMonitorInterval) {
+                addLog('⚠️ Мониторинг сессии не активен, перезапускаем...', 'warn');
+                startSessionMonitoring();
+            }
+        }, 30000);
+        
+        // Логирование при закрытии страницы
+        window.addEventListener('unload', function() {
+            console.log('🔚 Страница выгружается (unload event)');
+        });
     </script>
 </body>
 </html>

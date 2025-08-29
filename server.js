@@ -64,28 +64,8 @@ app.use(cors({
 }));
 app.options('*', cors());
 
-// Middleware для обработки sendBeacon запросов с Blob данными
-app.use('/api/track/session', (req, res, next) => {
-  if (req.headers['content-type'] === 'application/json' && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
-    req.on('end', () => {
-      try {
-        req.body = JSON.parse(body);
-        next();
-      } catch (error) {
-        console.error('❌ Failed to parse JSON from sendBeacon:', error);
-        return res.status(400).json({ error: 'Invalid JSON' });
-      }
-    });
-  } else {
-    next();
-  }
-});
-
 app.use(bodyParser.json({ limit: '1mb' }));
+app.use(bodyParser.text({ type: 'application/json', limit: '1mb' }));
 
 // ===== Статические файлы =====
 app.use(express.static('.'));
