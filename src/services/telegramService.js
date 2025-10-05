@@ -39,6 +39,19 @@ function normalizeUrl(url) {
   }
 }
 
+// ===== Функция извлечения origin из URL =====
+function extractOrigin(url) {
+  if (!url) return null;
+  
+  try {
+    const urlObj = new URL(url);
+    return `${urlObj.protocol}//${urlObj.host}`;
+  } catch (error) {
+    console.error('❌ Error extracting origin from URL:', error);
+    return url;
+  }
+}
+
 // ===== Динамическая проверка CORS доменов через базу данных =====
 export async function isDomainAllowed(origin) {
   if (!origin || origin === 'null') return true; // Разрешаем запросы без origin
@@ -71,10 +84,13 @@ export async function isDomainAllowed(origin) {
     if (data && data.length > 0) {
       for (const client of data) {
         if (client.website_url) {
-          const normalizedClientUrl = normalizeUrl(client.website_url);
-          if (normalizedClientUrl === normalizedOrigin) {
+          // Извлекаем origin из website_url для правильного сравнения
+          const clientOrigin = extractOrigin(client.website_url);
+          const normalizedClientOrigin = normalizeUrl(clientOrigin);
+          
+          if (normalizedClientOrigin === normalizedOrigin) {
             allowed = true;
-            console.log(`✅ CORS allowed for ${origin} (found in database)`);
+            console.log(`✅ CORS allowed for ${origin} (found in database: ${client.website_url})`);
             break;
           }
         }
