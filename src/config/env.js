@@ -25,6 +25,7 @@ export const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 export const allowedOrigins = [
   'https://savov.lovable.app',
   'https://snaptalk.lovable.app',
+  'https://velaris-zhaluzi.ru', // Веларис - рольставни и роллеты
   'http://localhost:5173', // для разработки
   'http://localhost:3000', // для тестовой страницы
   // Lovable sandbox домены

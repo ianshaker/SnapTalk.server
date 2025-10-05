@@ -33,20 +33,21 @@ import {
   sendToTopic,
   sendTelegramMessage,
   saveSiteVisit,
-  memoryMap
+  memoryMap,
+  isDomainAllowed
 } from './src/services/telegramService.js';
 import { formatNewVisitorMessage, formatReturnVisitorMessage, formatTabSwitchMessage, formatSessionEndMessage } from './src/services/messageFormatterService.js';
 import { getTelegramToClientService } from './src/services/telegramToClientService.js';
 
 const app = express();
 
-// CORS: разрешаем SnapTalk фронтенд и *.lovable.app
+// CORS: динамическая проверка через базу данных + статические домены
 app.use(cors({
-  origin: (origin, cb) => {
+  origin: async (origin, cb) => {
     // Разрешаем запросы без origin (например, мобильные приложения или локальные файлы)
     if (!origin || origin === 'null') return cb(null, true);
     
-    // Проверяем точные совпадения
+    // Проверяем статические разрешенные домены (для совместимости)
     if (allowedOrigins.includes(origin)) return cb(null, true);
     
     // Проверяем общие домены lovable.app
@@ -54,6 +55,18 @@ app.use(cors({
     
     // Проверяем Lovable sandbox домены
     if (lovableSandboxRegex.test(origin)) return cb(null, true);
+    
+    // 🆕 ДИНАМИЧЕСКАЯ ПРОВЕРКА: проверяем домен в базе данных
+    try {
+      const isAllowed = await isDomainAllowed(origin);
+      if (isAllowed) {
+        return cb(null, true);
+      }
+    } catch (error) {
+      console.error('❌ Error in dynamic CORS check:', error);
+      // В случае ошибки разрешаем запрос (fail-safe)
+      return cb(null, true);
+    }
     
     console.log('❌ CORS rejected origin:', origin);
     return cb(new Error('Not allowed by CORS'));

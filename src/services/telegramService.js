@@ -17,6 +17,86 @@ import visitorCache from '../utils/cache/VisitorCache.js';
 // ===== Хранилище связок clientId <-> topicId =====
 const memoryMap = new Map(); // clientId -> topicId
 
+// ===== Кэш для CORS доменов =====
+const domainCache = new Map(); // origin -> { allowed: boolean, timestamp: number }
+const CACHE_TTL = 5 * 60 * 1000; // 5 минут
+
+// ===== Функция нормализации URL =====
+function normalizeUrl(url) {
+  if (!url) return null;
+  
+  try {
+    // Убираем trailing slash
+    let normalized = url.replace(/\/$/, '');
+    
+    // Приводим к нижнему регистру для сравнения
+    normalized = normalized.toLowerCase();
+    
+    return normalized;
+  } catch (error) {
+    console.error('❌ Error normalizing URL:', error);
+    return url;
+  }
+}
+
+// ===== Динамическая проверка CORS доменов через базу данных =====
+export async function isDomainAllowed(origin) {
+  if (!origin || origin === 'null') return true; // Разрешаем запросы без origin
+  
+  // Проверяем кэш
+  const cached = domainCache.get(origin);
+  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    console.log(`🔄 CORS cache hit for ${origin}: ${cached.allowed ? '✅ allowed' : '❌ denied'}`);
+    return cached.allowed;
+  }
+  
+  try {
+    // Нормализуем origin для сравнения
+    const normalizedOrigin = normalizeUrl(origin);
+    
+    // Проверяем в базе данных
+    const { data, error } = await sb
+      .from('clients')
+      .select('website_url, integration_status')
+      .eq('integration_status', 'active');
+    
+    if (error) {
+      console.error('❌ Error checking domains in database:', error);
+      // В случае ошибки БД разрешаем запрос (fail-safe)
+      return true;
+    }
+    
+    // Проверяем совпадения
+    let allowed = false;
+    if (data && data.length > 0) {
+      for (const client of data) {
+        if (client.website_url) {
+          const normalizedClientUrl = normalizeUrl(client.website_url);
+          if (normalizedClientUrl === normalizedOrigin) {
+            allowed = true;
+            console.log(`✅ CORS allowed for ${origin} (found in database)`);
+            break;
+          }
+        }
+      }
+    }
+    
+    if (!allowed) {
+      console.log(`❌ CORS denied for ${origin} (not found in database)`);
+    }
+    
+    // Кэшируем результат
+    domainCache.set(origin, { allowed, timestamp: Date.now() });
+    
+    return allowed;
+    
+  } catch (error) {
+    console.error('❌ Error in isDomainAllowed:', error);
+    // В случае ошибки разрешаем запрос (fail-safe)
+    return true;
+  }
+}
+
 // ===== Утилиты для базы данных =====
 export async function findClientByApiKey(apiKey) {
   if (!sb || !apiKey) return null;
